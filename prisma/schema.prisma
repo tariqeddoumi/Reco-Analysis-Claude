@@ -1,0 +1,840 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// PARAMÉTRAGE - Tables de référentiels
+// ============================================================
+
+model ConfidentialityLevel {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int      @default(0)
+  color       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  missions        Mission[]
+  recommendations Recommendation[]
+
+  @@map("confidentiality_levels")
+}
+
+model MissionType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  missions Mission[]
+
+  @@map("mission_types")
+}
+
+model MissionStatus {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int      @default(0)
+  color       String?
+  isFinal     Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  missions Mission[]
+
+  @@map("mission_statuses")
+}
+
+model SourceType {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  label             String
+  description       String?
+  sourceCoefficient Float    @default(1.0)
+  isRegulator       Boolean  @default(false)
+  requiresProof     Boolean  @default(true)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  missions        Mission[]
+  recommendations Recommendation[]
+
+  @@map("source_types")
+}
+
+model RiskType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("risk_types")
+}
+
+model SeverityLevel {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  label        String
+  description  String?
+  numericValue Int
+  color        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("severity_levels")
+}
+
+model ProbabilityLevel {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  label        String
+  description  String?
+  numericValue Int
+  color        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("probability_levels")
+}
+
+model PriorityLevel {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  label        String
+  description  String?
+  scoreMin     Int
+  scoreMax     Int
+  color        String?
+  badgeVariant String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("priority_levels")
+}
+
+model RecommendationStatus {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int      @default(0)
+  color       String?
+  isFinal     Boolean  @default(false)
+  isOpen      Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recommendations  Recommendation[]
+  statusHistoryFrom StatusHistory[] @relation("StatusHistoryFromReco")
+  statusHistoryTo   StatusHistory[] @relation("StatusHistoryToReco")
+
+  @@map("recommendation_statuses")
+}
+
+model ActionStatus {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int      @default(0)
+  color       String?
+  isFinal     Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions              Action[]
+  statusHistoryFrom    StatusHistory[] @relation("StatusHistoryFromAction")
+  statusHistoryTo      StatusHistory[] @relation("StatusHistoryToAction")
+
+  @@map("action_statuses")
+}
+
+model EvidenceType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  allowedMime String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  evidences Evidence[]
+
+  @@map("evidence_types")
+}
+
+model RecommendationType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("recommendation_types")
+}
+
+model RootCauseType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("root_cause_types")
+}
+
+model EscalationRule {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  label           String
+  description     String?
+  daysBeforeDue   Int
+  escalationLevel Int      @default(1)
+  notifyRoles     String[]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("escalation_rules")
+}
+
+model WorkflowStep {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  label             String
+  description       String?
+  entityType        String
+  fromStatus        String
+  toStatus          String
+  requiredRoles     String[]
+  requiresProof     Boolean  @default(false)
+  requiresComment   Boolean  @default(false)
+  requiresHierarchy Boolean  @default(false)
+  rank              Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("workflow_steps")
+}
+
+model ParameterSetting {
+  id          String   @id @default(cuid())
+  category    String
+  key         String
+  value       String
+  label       String?
+  description String?
+  dataType    String   @default("string")
+  isEditable  Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@unique([category, key])
+  @@map("parameter_settings")
+}
+
+// ============================================================
+// ORGANISATIONS
+// ============================================================
+
+model Entity {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  parentId    String?
+  type        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Entity?  @relation("EntityHierarchy", fields: [parentId], references: [id])
+  children Entity[] @relation("EntityHierarchy")
+
+  missions        Mission[]
+  recommendations Recommendation[]
+  users           UserEntity[]
+
+  @@map("entities")
+}
+
+model Direction {
+  id       String  @id @default(cuid())
+  code     String  @unique
+  label    String
+  entityId String?
+  isActive Boolean @default(true)
+
+  recommendations Recommendation[]
+
+  @@map("directions")
+}
+
+model Process {
+  id       String  @id @default(cuid())
+  code     String  @unique
+  label    String
+  category String?
+  isActive Boolean @default(true)
+
+  recommendations Recommendation[]
+
+  @@map("processes")
+}
+
+// ============================================================
+// UTILISATEURS ET HABILITATIONS
+// ============================================================
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  module      String
+  action      String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  supabaseId  String?   @unique
+  email       String    @unique
+  firstName   String
+  lastName    String
+  phone       String?
+  title       String?
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userRoles UserRole[]
+  entities  UserEntity[]
+
+  missionsAsResponsible      Mission[]       @relation("MissionResponsible")
+  recommendationsAsOwner     Recommendation[] @relation("RecommendationOwner")
+  recommendationsAsOp        Recommendation[] @relation("RecommendationOperational")
+  actions                    Action[]
+  evidencesDeposited         Evidence[]
+  comments                   Comment[]
+  auditLogs                  AuditLog[]
+  notifications              Notification[]
+  deadlineExtensionsRequest  DeadlineExtension[] @relation("ExtensionRequester")
+  deadlineExtensionsValidate DeadlineExtension[] @relation("ExtensionValidator")
+  statusHistory              StatusHistory[]
+
+  @@map("users")
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserEntity {
+  userId    String
+  entityId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, entityId])
+  @@map("user_entities")
+}
+
+// ============================================================
+// MISSIONS
+// ============================================================
+
+model Mission {
+  id                     String    @id @default(cuid())
+  reference              String    @unique
+  title                  String
+  description            String?
+  missionTypeId          String
+  sourceId               String
+  issuingAuthority       String?
+  entityId               String
+  scope                  String?
+  periodCovered          String?
+  startDate              DateTime?
+  endDate                DateTime?
+  reportReceivedAt       DateTime?
+  reportValidatedAt      DateTime?
+  responsibleId          String
+  confidentialityLevelId String
+  statusId               String
+  observations           String?
+  isDeleted              Boolean   @default(false)
+  deletedAt              DateTime?
+  deletedBy              String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  createdBy              String?
+
+  missionType          MissionType          @relation(fields: [missionTypeId], references: [id])
+  source               SourceType           @relation(fields: [sourceId], references: [id])
+  entity               Entity               @relation(fields: [entityId], references: [id])
+  responsible          User                 @relation("MissionResponsible", fields: [responsibleId], references: [id])
+  confidentialityLevel ConfidentialityLevel @relation(fields: [confidentialityLevelId], references: [id])
+  status               MissionStatus        @relation(fields: [statusId], references: [id])
+
+  recommendations Recommendation[]
+  attachments     Attachment[]
+  auditLogs       AuditLog[]
+
+  @@map("missions")
+}
+
+// ============================================================
+// RECOMMANDATIONS
+// ============================================================
+
+model Recommendation {
+  id                       String    @id @default(cuid())
+  code                     String    @unique
+  missionId                String
+  sourceId                 String
+  reportReference          String?
+  pageReference            String?
+  issuedAt                 DateTime
+  entityId                 String
+  directionId              String?
+  processId                String?
+  riskTypeId               String?
+  recommendationTypeId     String?
+  rootCauseTypeId          String?
+  findingDescription       String
+  rootCause                String?
+  potentialConsequence     String?
+  recommendation           String
+  severityId               String?
+  probabilityId            String?
+  rawCriticality           Float?
+  finalCriticality         Float?
+  regulatorCoefficient     Float     @default(1.0)
+  recurrenceCoefficient    Float     @default(1.0)
+  delayCoefficient         Float     @default(1.0)
+  priorityId               String?
+  ownerId                  String?
+  operationalResponsibleId String?
+  initialDueDate           DateTime?
+  revisedDueDate           DateTime?
+  closedAt                 DateTime?
+  statusId                 String
+  progressRate             Int       @default(0)
+  entityComment            String?
+  controllerComment        String?
+  isRegulator              Boolean   @default(false)
+  isRecurrent              Boolean   @default(false)
+  financialImpact          Float?
+  regulatoryImpact         Int?
+  reputationalImpact       Int?
+  operationalImpact        Int?
+  clientImpact             Int?
+  siImpact                 Int?
+  legalImpact              Int?
+  complianceImpact         Int?
+  confidentialityLevelId   String?
+  isDeleted                Boolean   @default(false)
+  deletedAt                DateTime?
+  deletedBy                String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  createdBy                String?
+
+  mission                Mission              @relation(fields: [missionId], references: [id])
+  source                 SourceType           @relation(fields: [sourceId], references: [id])
+  entity                 Entity               @relation(fields: [entityId], references: [id])
+  direction              Direction?           @relation(fields: [directionId], references: [id])
+  process                Process?             @relation(fields: [processId], references: [id])
+  riskType               RiskType?            @relation(fields: [riskTypeId], references: [id])
+  recommendationType     RecommendationType?  @relation(fields: [recommendationTypeId], references: [id])
+  rootCauseType          RootCauseType?       @relation(fields: [rootCauseTypeId], references: [id])
+  severity               SeverityLevel?       @relation(fields: [severityId], references: [id])
+  probability            ProbabilityLevel?    @relation(fields: [probabilityId], references: [id])
+  priority               PriorityLevel?       @relation(fields: [priorityId], references: [id])
+  owner                  User?                @relation("RecommendationOwner", fields: [ownerId], references: [id])
+  operationalResponsible User?                @relation("RecommendationOperational", fields: [operationalResponsibleId], references: [id])
+  status                 RecommendationStatus @relation(fields: [statusId], references: [id])
+  confidentialityLevel   ConfidentialityLevel? @relation(fields: [confidentialityLevelId], references: [id])
+
+  actionPlans        ActionPlan[]
+  evidences          Evidence[]
+  comments           Comment[]
+  attachments        Attachment[]
+  statusHistory      StatusHistory[]
+  auditLogs          AuditLog[]
+  deadlineExtensions DeadlineExtension[]
+  notifications      Notification[]
+
+  @@map("recommendations")
+}
+
+// ============================================================
+// PLANS D'ACTION
+// ============================================================
+
+model ActionPlan {
+  id               String    @id @default(cuid())
+  recommendationId String
+  title            String
+  description      String?
+  statusCode       String    @default("DRAFT")
+  validatedAt      DateTime?
+  validatedBy      String?
+  progressRate     Int       @default(0)
+  isDeleted        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdBy        String?
+
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id])
+  actions        Action[]
+
+  @@map("action_plans")
+}
+
+model Action {
+  id              String    @id @default(cuid())
+  actionPlanId    String
+  title           String
+  description     String?
+  responsibleId   String?
+  statusId        String
+  priority        Int       @default(2)
+  progressRate    Int       @default(0)
+  weight          Int       @default(100)
+  estimatedEffort String?
+  complexity      String?
+  plannedStartAt  DateTime?
+  plannedEndAt    DateTime?
+  actualEndAt     DateTime?
+  deliverable     String?
+  expectedProof   String?
+  blockReason     String?
+  comment         String?
+  isDeleted       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+
+  actionPlan  ActionPlan   @relation(fields: [actionPlanId], references: [id])
+  responsible User?        @relation(fields: [responsibleId], references: [id])
+  status      ActionStatus @relation(fields: [statusId], references: [id])
+
+  evidences          Evidence[]
+  comments           Comment[]
+  attachments        Attachment[]
+  statusHistory      StatusHistory[]
+  auditLogs          AuditLog[]
+  deadlineExtensions DeadlineExtension[]
+
+  @@map("actions")
+}
+
+// ============================================================
+// PREUVES
+// ============================================================
+
+model Evidence {
+  id               String    @id @default(cuid())
+  recommendationId String?
+  actionId         String?
+  evidenceTypeId   String?
+  title            String
+  description      String?
+  fileName         String?
+  fileUrl          String?
+  fileSize         Int?
+  mimeType         String?
+  fileHash         String?
+  version          Int       @default(1)
+  depositorId      String
+  depositedAt      DateTime  @default(now())
+  statusCode       String    @default("DEPOSITED")
+  validatorComment String?
+  validatedAt      DateTime?
+  validatedBy      String?
+  isDeleted        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
+  action         Action?         @relation(fields: [actionId], references: [id])
+  evidenceType   EvidenceType?   @relation(fields: [evidenceTypeId], references: [id])
+  depositor      User            @relation(fields: [depositorId], references: [id])
+
+  auditLogs AuditLog[]
+
+  @@map("evidences")
+}
+
+// ============================================================
+// COMMENTAIRES
+// ============================================================
+
+model Comment {
+  id               String   @id @default(cuid())
+  recommendationId String?
+  actionId         String?
+  authorId         String
+  content          String
+  isInternal       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
+  action         Action?         @relation(fields: [actionId], references: [id])
+  author         User            @relation(fields: [authorId], references: [id])
+
+  @@map("comments")
+}
+
+// ============================================================
+// PIÈCES JOINTES
+// ============================================================
+
+model Attachment {
+  id               String   @id @default(cuid())
+  missionId        String?
+  recommendationId String?
+  actionId         String?
+  deadlineExtId    String?
+  title            String
+  description      String?
+  fileName         String
+  fileUrl          String
+  fileSize         Int?
+  mimeType         String?
+  uploaderId       String?
+  createdAt        DateTime @default(now())
+
+  mission           Mission?           @relation(fields: [missionId], references: [id])
+  recommendation    Recommendation?    @relation(fields: [recommendationId], references: [id])
+  action            Action?            @relation(fields: [actionId], references: [id])
+  deadlineExtension DeadlineExtension? @relation(fields: [deadlineExtId], references: [id])
+
+  @@map("attachments")
+}
+
+// ============================================================
+// HISTORIQUE DES STATUTS
+// ============================================================
+
+model StatusHistory {
+  id                 String   @id @default(cuid())
+  entityType         String
+  entityId           String
+  recommendationId   String?
+  actionId           String?
+  fromStatusRecoId   String?
+  toStatusRecoId     String?
+  fromStatusActionId String?
+  toStatusActionId   String?
+  changedById        String
+  comment            String?
+  createdAt          DateTime @default(now())
+
+  recommendation   Recommendation?       @relation(fields: [recommendationId], references: [id])
+  action           Action?               @relation(fields: [actionId], references: [id])
+  fromStatusReco   RecommendationStatus? @relation("StatusHistoryFromReco", fields: [fromStatusRecoId], references: [id])
+  toStatusReco     RecommendationStatus? @relation("StatusHistoryToReco", fields: [toStatusRecoId], references: [id])
+  fromStatusAction ActionStatus?         @relation("StatusHistoryFromAction", fields: [fromStatusActionId], references: [id])
+  toStatusAction   ActionStatus?         @relation("StatusHistoryToAction", fields: [toStatusActionId], references: [id])
+  changedBy        User                  @relation(fields: [changedById], references: [id])
+
+  @@map("status_history")
+}
+
+// ============================================================
+// DEMANDES DE REPORT
+// ============================================================
+
+model DeadlineExtension {
+  id               String    @id @default(cuid())
+  recommendationId String?
+  actionId         String?
+  currentDueDate   DateTime
+  requestedDueDate DateTime
+  reason           String
+  justification    String?
+  impact           String?
+  requesterId      String
+  requestedAt      DateTime  @default(now())
+  statusCode       String    @default("DRAFT")
+  validatorId      String?
+  validatedAt      DateTime?
+  rejectionReason  String?
+  isDeleted        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
+  action         Action?         @relation(fields: [actionId], references: [id])
+  requester      User            @relation("ExtensionRequester", fields: [requesterId], references: [id])
+  validator      User?           @relation("ExtensionValidator", fields: [validatorId], references: [id])
+
+  attachments Attachment[]
+
+  @@map("deadline_extensions")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id               String    @id @default(cuid())
+  userId           String
+  recommendationId String?
+  type             String
+  title            String
+  message          String
+  isRead           Boolean   @default(false)
+  readAt           DateTime?
+  data             Json?
+  createdAt        DateTime  @default(now())
+
+  user           User            @relation(fields: [userId], references: [id])
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
+
+  @@map("notifications")
+}
+
+// ============================================================
+// JOURNAL D'AUDIT
+// ============================================================
+
+model AuditLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  missionId        String?
+  recommendationId String?
+  actionId         String?
+  evidenceId       String?
+  entityType       String
+  entityId         String
+  action           String
+  module           String
+  oldValues        Json?
+  newValues        Json?
+  ipAddress        String?
+  userAgent        String?
+  comment          String?
+  createdAt        DateTime @default(now())
+
+  user           User?           @relation(fields: [userId], references: [id])
+  mission        Mission?        @relation(fields: [missionId], references: [id])
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
+  actionRef      Action?         @relation(fields: [actionId], references: [id])
+  evidence       Evidence?       @relation(fields: [evidenceId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ============================================================
+// MODÈLES DE RAPPORT
+// ============================================================
+
+model ReportTemplate {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  type        String
+  format      String
+  template    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("report_templates")
+}
