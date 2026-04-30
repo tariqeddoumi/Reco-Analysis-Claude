@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Banking Application CSS Variables - Professional Theme
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* shadcn/ui compatible CSS variables (HSL format) */
+    --background: 0 0% 100%;
+    --foreground: 215 28% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+
+    /* Primary: Navy/Slate */
+    --primary: 215 50% 23%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary: Light slate */
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 215 28% 17%;
+
+    /* Muted: Subtle backgrounds */
+    --muted: 214 32% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent: Banking Blue */
+    --accent: 221 83% 53%;
+    --accent-foreground: 0 0% 98%;
+
+    /* Destructive: Red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Borders & Inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+
+    /* Border radius */
+    --radius: 0.5rem;
+
+    /* Sidebar specific */
+    --sidebar-bg: 213 64% 17%;
+    --sidebar-fg: 210 40% 90%;
+    --sidebar-border: 213 50% 22%;
+    --sidebar-hover: 213 55% 25%;
+    --sidebar-active: 213 60% 30%;
+    --sidebar-active-fg: 0 0% 100%;
+    --sidebar-muted: 213 30% 60%;
+    --sidebar-width: 260px;
+    --sidebar-width-collapsed: 64px;
+
+    /* Header */
+    --header-height: 64px;
+    --header-bg: 0 0% 100%;
+    --header-border: 214 32% 91%;
+  }
+
+  .dark {
+    --background: 215 28% 8%;
+    --foreground: 210 40% 96%;
+
+    --card: 215 28% 11%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 215 28% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 213 64% 60%;
+    --primary-foreground: 215 28% 8%;
+
+    --secondary: 215 28% 16%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 215 28% 16%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 221 83% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 215 28% 20%;
+    --input: 215 28% 20%;
+    --ring: 221 83% 60%;
+
+    --sidebar-bg: 215 35% 6%;
+    --sidebar-fg: 210 40% 85%;
+    --sidebar-border: 215 30% 12%;
+    --sidebar-hover: 215 30% 14%;
+    --sidebar-active: 221 60% 25%;
+    --sidebar-active-fg: 0 0% 100%;
+    --sidebar-muted: 215 20% 50%;
+
+    --header-bg: 215 28% 11%;
+    --header-border: 215 28% 20%;
+  }
+}
+
+/* ============================================================
+   Base Styles
+   ============================================================ */
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    height: 100%;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================================
+   Sidebar Layout Variables
+   ============================================================ */
+
+:root {
+  --sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   Scrollbar Styling
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* ============================================================
+   Keyframe Animations
+   ============================================================ */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ============================================================
+   Banking Utility Classes
+   ============================================================ */
+
+@layer utilities {
+  .text-stat {
+    font-size: 2rem;
+    line-height: 2.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.025em;
+  }
+
+  .text-label-upper {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .shadow-banking {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+
+  .shadow-banking-hover {
+    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.12), 0 2px 4px -1px rgb(0 0 0 / 0.08);
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--border)) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--sidebar-fg));
+    transition: background-color 0.15s ease, color 0.15s ease;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .sidebar-link:hover {
+    background-color: hsl(var(--sidebar-hover));
+    color: hsl(0 0% 100%);
+  }
+
+  .sidebar-link.active {
+    background-color: hsl(var(--sidebar-active));
+    color: hsl(var(--sidebar-active-fg));
+  }
+
+  .progress-bar-transition {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* ============================================================
+   Print Styles
+   ============================================================ */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+}
