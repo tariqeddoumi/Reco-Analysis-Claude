@@ -75,7 +75,7 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: "Archivée",
 };
 
-export default function EvidencesPage() {
+function EvidencesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -466,5 +466,19 @@ export default function EvidencesPage() {
         </DialogContent>
       </Dialog>
     </AppLayout>
+  );
+}
+
+export default function EvidencesPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <AppLayout>
+          <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        </AppLayout>
+      }
+    >
+      <EvidencesPageContent />
+    </React.Suspense>
   );
 }
