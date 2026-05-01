@@ -14,6 +14,8 @@ export async function getRecommendations(filters: FilterOptions = {}): Promise<P
     priorityId,
     isRegulator,
     isOverdue,
+    isCritical,
+    isOpen,
     missionId,
     sortBy = "createdAt",
     sortOrder = "desc",
@@ -34,9 +36,15 @@ export async function getRecommendations(filters: FilterOptions = {}): Promise<P
   if (priorityId) where.priorityId = priorityId;
   if (isRegulator !== undefined) where.isRegulator = isRegulator;
   if (missionId) where.missionId = missionId;
+  if (isOpen) {
+    where.closedAt = null;
+  }
   if (isOverdue) {
     where.closedAt = null;
     where.initialDueDate = { lt: new Date() };
+  }
+  if (isCritical) {
+    where.finalCriticality = { gt: 20 };
   }
 
   const [total, data] = await Promise.all([
@@ -287,7 +295,7 @@ export async function getDashboardKpis() {
       where: {
         isDeleted: false,
         closedAt: null,
-        priority: { code: "CRITICAL" },
+        finalCriticality: { gt: 20 },
       },
     }),
     prisma.recommendation.count({
@@ -320,32 +328,37 @@ export async function getDashboardKpis() {
 }
 
 export async function getRecommendationsBySource() {
-  const sources = await prisma.sourceType.findMany({ where: { isActive: true } });
+  const now = new Date();
 
-  return Promise.all(
-    sources.map(async (source) => {
-      const total = await prisma.recommendation.count({
-        where: { sourceId: source.id, isDeleted: false },
-      });
-      const closed = await prisma.recommendation.count({
-        where: { sourceId: source.id, isDeleted: false, closedAt: { not: null } },
-      });
-      const overdue = await prisma.recommendation.count({
-        where: {
-          sourceId: source.id,
-          isDeleted: false,
-          closedAt: null,
-          initialDueDate: { lt: new Date() },
-        },
-      });
-      return {
-        source: source.label,
-        total,
-        closed,
-        open: total - closed,
-        overdue,
-        closureRate: total > 0 ? Math.round((closed / total) * 100) : 0,
-      };
-    })
-  );
+  const [sources, recommendations] = await Promise.all([
+    prisma.sourceType.findMany({ where: { isActive: true } }),
+    prisma.recommendation.findMany({
+      where: { isDeleted: false },
+      select: {
+        sourceId: true,
+        closedAt: true,
+        initialDueDate: true,
+        revisedDueDate: true,
+      },
+    }),
+  ]);
+
+  return sources.map((source) => {
+    const recos = recommendations.filter((r) => r.sourceId === source.id);
+    const total = recos.length;
+    const closed = recos.filter((r) => r.closedAt !== null).length;
+    const overdue = recos.filter((r) => {
+      const dueDate = r.revisedDueDate ?? r.initialDueDate;
+      return r.closedAt === null && dueDate !== null && dueDate < now;
+    }).length;
+
+    return {
+      source: source.label,
+      total,
+      closed,
+      open: total - closed,
+      overdue,
+      closureRate: total > 0 ? Math.round((closed / total) * 100) : 0,
+    };
+  });
 }

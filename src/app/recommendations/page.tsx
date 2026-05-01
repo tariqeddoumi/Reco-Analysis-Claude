@@ -79,6 +79,7 @@ export default function RecommendationsPage() {
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [sortBy, setSortBy] = React.useState("createdAt");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const [referentials, setReferentials] = React.useState<ReferentialsData>({});
 
@@ -151,6 +152,31 @@ export default function RecommendationsPage() {
     setIsOverdue(false);
     setQuickFilter("all");
     setPage(1);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams({ type: "excel" });
+      if (quickFilter === "overdue") params.set("type", "overdue");
+      if (quickFilter === "regulator") params.set("type", "regulator");
+      const res = await fetch(`/api/reports/export?${params.toString()}`);
+      if (!res.ok) throw new Error("Export échoué");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      a.download = disposition.match(/filename="(.+)"/)?.[ 1] ?? "recommandations.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently ignore — the API returns JSON error which won't open as CSV
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getRowClass = (row: RecommendationWithRelations): string => {
@@ -311,9 +337,14 @@ export default function RecommendationsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => {}}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleExport}
+              disabled={isExporting}
+            >
               <Download className="h-4 w-4" />
-              Exporter
+              {isExporting ? "Export..." : "Exporter"}
             </Button>
             <Button onClick={() => router.push("/recommendations/new")} className="gap-2">
               <Plus className="h-4 w-4" />

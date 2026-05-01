@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
       missionId: searchParams.get("missionId") || undefined,
       isRegulator: searchParams.get("isRegulator") === "true" ? true : undefined,
       isOverdue: searchParams.get("isOverdue") === "true" ? true : undefined,
+      isCritical: searchParams.get("isCritical") === "true" ? true : undefined,
+      isOpen: searchParams.get("isOpen") === "true" ? true : undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || "desc",
     };
