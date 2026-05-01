@@ -12,7 +12,7 @@ export type ExtensionStatusCode = "DRAFT" | "SUBMITTED" | "IN_VALIDATION" | "VAL
 
 export interface DashboardKpi {
   totalMissions: number;
-  totalRecommendations: number;
+  totalRecommandations: number;
   openRecommendations: number;
   closedRecommendations: number;
   overdueRecommendations: number;
@@ -101,6 +101,8 @@ export interface FilterOptions {
   priorityId?: string;
   isRegulator?: boolean;
   isOverdue?: boolean;
+  isCritical?: boolean;
+  isOpen?: boolean;
   missionId?: string;
   responsibleId?: string;
   fromDate?: string;
