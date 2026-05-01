@@ -290,7 +290,7 @@ export default function RolesAdminPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           {role.isSystem && (
-                            <Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" title="Rôle système" />
+                            <span title="Rôle système"><Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" /></span>
                           )}
                           <span className="font-medium">{role.label}</span>
                         </div>
