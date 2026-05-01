@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         rootCauseTypes,
         entities,
         roles,
+        permissions,
       ] = await Promise.all([
         prisma.confidentialityLevel.findMany({ where: { isActive: true }, orderBy: { rank: "asc" } }),
         prisma.missionType.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
         prisma.rootCauseType.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
         prisma.entity.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
         prisma.role.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
+        prisma.permission.findMany({ where: { isActive: true }, orderBy: [{ module: "asc" }, { label: "asc" }] }),
       ]);
 
       Object.assign(referentials, {
@@ -62,6 +64,7 @@ export async function GET(request: NextRequest) {
         rootCauseTypes,
         entities,
         roles,
+        permissions,
       });
     }
 
