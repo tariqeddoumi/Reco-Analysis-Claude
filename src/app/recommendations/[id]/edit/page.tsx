@@ -170,7 +170,7 @@ export default function EditRecommendationPage() {
   const [serverError, setServerError] = React.useState<string | null>(null);
 
   const { register, control, handleSubmit, trigger, watch, reset, formState: { errors } } = useForm<RecommendationFormData>({
-    resolver: zodResolver(recommendationSchema.partial()),
+    resolver: zodResolver(recommendationSchema),
     defaultValues: { isRegulator: false, isRecurrent: false },
   });
 
