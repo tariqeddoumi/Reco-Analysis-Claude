@@ -63,7 +63,7 @@ const ADMIN_SECTIONS: AdminCard[] = [
     buttonLabel: "Gérer",
   },
   {
-    href: "/admin/parameters",
+    href: "/admin/settings",
     icon: Settings,
     title: "Paramètres Système",
     description: "Relances automatiques, seuils d'alerte, workflow et notifications",
