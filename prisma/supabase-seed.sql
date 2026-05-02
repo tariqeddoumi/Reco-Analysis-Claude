@@ -629,45 +629,67 @@ DECLARE
   uid_validateur  uuid := '00000000-0000-0000-0000-000000000003';
   uid_responsable uuid := '00000000-0000-0000-0000-000000000004';
   uid_management  uuid := '00000000-0000-0000-0000-000000000005';
+  inst_id         uuid;
 BEGIN
+
+  -- Récupère l'instance_id réel du projet Supabase
+  SELECT id INTO inst_id FROM auth.instances LIMIT 1;
+  IF inst_id IS NULL THEN
+    inst_id := '00000000-0000-0000-0000-000000000000';
+  END IF;
 
   DELETE FROM auth.identities WHERE user_id IN (uid_admin, uid_auditeur, uid_validateur, uid_responsable, uid_management);
   DELETE FROM auth.users      WHERE id       IN (uid_admin, uid_auditeur, uid_validateur, uid_responsable, uid_management);
 
   -- Admin
-  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token)
-  VALUES ('00000000-0000-0000-0000-000000000000', uid_admin, 'authenticated', 'authenticated', 'admin@banque.ma',
-    crypt('Admin@2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), '', '');
-  INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-  VALUES (uid_admin::text, uid_admin, json_build_object('sub', uid_admin::text, 'email', 'admin@banque.ma'), 'email', NOW(), NOW(), NOW());
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_sso_user)
+  VALUES (inst_id, uid_admin, 'authenticated', 'authenticated', 'admin@banque.ma',
+    crypt('Admin@2026!', gen_salt('bf')), NOW(),
+    '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), false);
+  INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  VALUES (gen_random_uuid(), uid_admin::text, uid_admin,
+    json_build_object('sub', uid_admin::text, 'email', 'admin@banque.ma'), 'email', NOW(), NOW(), NOW());
 
   -- Auditeur
-  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token)
-  VALUES ('00000000-0000-0000-0000-000000000000', uid_auditeur, 'authenticated', 'authenticated', 'auditeur@banque.ma',
-    crypt('Audit@2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), '', '');
-  INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-  VALUES (uid_auditeur::text, uid_auditeur, json_build_object('sub', uid_auditeur::text, 'email', 'auditeur@banque.ma'), 'email', NOW(), NOW(), NOW());
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_sso_user)
+  VALUES (inst_id, uid_auditeur, 'authenticated', 'authenticated', 'auditeur@banque.ma',
+    crypt('Audit@2026!', gen_salt('bf')), NOW(),
+    '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), false);
+  INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  VALUES (gen_random_uuid(), uid_auditeur::text, uid_auditeur,
+    json_build_object('sub', uid_auditeur::text, 'email', 'auditeur@banque.ma'), 'email', NOW(), NOW(), NOW());
 
   -- Validateur
-  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token)
-  VALUES ('00000000-0000-0000-0000-000000000000', uid_validateur, 'authenticated', 'authenticated', 'validateur@banque.ma',
-    crypt('Valid@2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), '', '');
-  INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-  VALUES (uid_validateur::text, uid_validateur, json_build_object('sub', uid_validateur::text, 'email', 'validateur@banque.ma'), 'email', NOW(), NOW(), NOW());
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_sso_user)
+  VALUES (inst_id, uid_validateur, 'authenticated', 'authenticated', 'validateur@banque.ma',
+    crypt('Valid@2026!', gen_salt('bf')), NOW(),
+    '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), false);
+  INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  VALUES (gen_random_uuid(), uid_validateur::text, uid_validateur,
+    json_build_object('sub', uid_validateur::text, 'email', 'validateur@banque.ma'), 'email', NOW(), NOW(), NOW());
 
   -- Responsable
-  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token)
-  VALUES ('00000000-0000-0000-0000-000000000000', uid_responsable, 'authenticated', 'authenticated', 'responsable@banque.ma',
-    crypt('Resp@2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), '', '');
-  INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-  VALUES (uid_responsable::text, uid_responsable, json_build_object('sub', uid_responsable::text, 'email', 'responsable@banque.ma'), 'email', NOW(), NOW(), NOW());
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_sso_user)
+  VALUES (inst_id, uid_responsable, 'authenticated', 'authenticated', 'responsable@banque.ma',
+    crypt('Resp@2026!', gen_salt('bf')), NOW(),
+    '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), false);
+  INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  VALUES (gen_random_uuid(), uid_responsable::text, uid_responsable,
+    json_build_object('sub', uid_responsable::text, 'email', 'responsable@banque.ma'), 'email', NOW(), NOW(), NOW());
 
   -- Management
-  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token)
-  VALUES ('00000000-0000-0000-0000-000000000000', uid_management, 'authenticated', 'authenticated', 'management@banque.ma',
-    crypt('Mgmt@2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), '', '');
-  INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-  VALUES (uid_management::text, uid_management, json_build_object('sub', uid_management::text, 'email', 'management@banque.ma'), 'email', NOW(), NOW(), NOW());
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_sso_user)
+  VALUES (inst_id, uid_management, 'authenticated', 'authenticated', 'management@banque.ma',
+    crypt('Mgmt@2026!', gen_salt('bf')), NOW(),
+    '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW(), false);
+  INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  VALUES (gen_random_uuid(), uid_management::text, uid_management,
+    json_build_object('sub', uid_management::text, 'email', 'management@banque.ma'), 'email', NOW(), NOW(), NOW());
 
 END $$;
 
