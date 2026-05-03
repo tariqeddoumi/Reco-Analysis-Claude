@@ -23,6 +23,15 @@ import {
   getDaysRemaining,
   cn,
 } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { TemporalStatus } from "@/types";
 import {
   ChevronRight,
@@ -47,6 +56,7 @@ import {
   Send,
   ThumbsUp,
   ThumbsDown,
+  Plus,
 } from "lucide-react";
 
 /* ─────────────────────────── Types ─────────────────────────── */
@@ -257,6 +267,10 @@ export default function RecommendationDetailPage() {
   const [activeTab, setActiveTab] = React.useState("informations");
   const [newComment, setNewComment] = React.useState("");
   const [isSubmittingComment, setIsSubmittingComment] = React.useState(false);
+  const [showActionPlanDialog, setShowActionPlanDialog] = React.useState(false);
+  const [actionPlanForm, setActionPlanForm] = React.useState({ title: "", description: "" });
+  const [isSubmittingActionPlan, setIsSubmittingActionPlan] = React.useState(false);
+  const [actionPlanError, setActionPlanError] = React.useState<string | null>(null);
 
   const fetchData = React.useCallback(() => {
     if (!id) return;
@@ -285,6 +299,30 @@ export default function RecommendationDetailPage() {
       console.error(err);
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleCreateActionPlan = async () => {
+    if (!actionPlanForm.title.trim() || !id) return;
+    setIsSubmittingActionPlan(true);
+    setActionPlanError(null);
+    try {
+      const res = await fetch("/api/action-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendationId: id, title: actionPlanForm.title, description: actionPlanForm.description }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Erreur lors de la création");
+      }
+      setShowActionPlanDialog(false);
+      setActionPlanForm({ title: "", description: "" });
+      fetchData();
+    } catch (err) {
+      setActionPlanError(err instanceof Error ? err.message : "Une erreur est survenue");
+    } finally {
+      setIsSubmittingActionPlan(false);
     }
   };
 
@@ -644,11 +682,16 @@ export default function RecommendationDetailPage() {
           {/* ── Plan d'action ── */}
           <TabsContent value="plan-action" className="mt-6">
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button size="sm" className="gap-1.5" onClick={() => { setActionPlanError(null); setShowActionPlanDialog(true); }}>
+                  <Plus className="h-4 w-4" />Ajouter un plan d&apos;action
+                </Button>
+              </div>
               {(!rec.actionPlans || rec.actionPlans.length === 0) ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center border border-border rounded-lg bg-card">
                   <ListChecks className="h-8 w-8 text-muted-foreground mb-3" />
                   <p className="text-sm font-medium">Aucun plan d&apos;action</p>
-                  <p className="text-xs text-muted-foreground mt-1">Les plans d&apos;action seront listés ici.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Cliquez sur &quot;Ajouter un plan d&apos;action&quot; pour commencer.</p>
                 </div>
               ) : rec.actionPlans.map((plan) => (
                 <Card key={plan.id} className="overflow-hidden">
@@ -915,6 +958,50 @@ export default function RecommendationDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* ── Dialog création plan d'action ── */}
+      <Dialog open={showActionPlanDialog} onOpenChange={setShowActionPlanDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nouveau plan d&apos;action</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {actionPlanError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{actionPlanError}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">
+                Titre <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={actionPlanForm.title}
+                onChange={(e) => setActionPlanForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Titre du plan d'action"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Description</Label>
+              <Textarea
+                value={actionPlanForm.description}
+                onChange={(e) => setActionPlanForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Description du plan d'action (optionnel)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowActionPlanDialog(false)} disabled={isSubmittingActionPlan}>
+              Annuler
+            </Button>
+            <Button onClick={handleCreateActionPlan} disabled={isSubmittingActionPlan || !actionPlanForm.title.trim()}>
+              {isSubmittingActionPlan ? "Création..." : "Créer le plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
