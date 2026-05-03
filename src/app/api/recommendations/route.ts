@@ -44,7 +44,25 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validated = recommendationSchema.parse(body);
-    const recommendation = await createRecommendation(validated as Record<string, unknown>, user.id);
+
+    const DATE_FIELDS = ["issuedAt", "initialDueDate"] as const;
+    const recoData: Record<string, unknown> = { ...validated };
+    for (const field of DATE_FIELDS) {
+      const val = recoData[field];
+      recoData[field] = val && typeof val === "string" && val.trim() !== "" ? new Date(val) : null;
+    }
+    // Convertit les strings vides en null pour les FK optionnelles
+    const NULLABLE_ID_FIELDS = [
+      "directionId","processId","recommendationTypeId","rootCauseTypeId","riskTypeId",
+      "severityId","probabilityId","priorityId","ownerId","operationalResponsibleId",
+      "confidentialityLevelId",
+    ] as const;
+    for (const field of NULLABLE_ID_FIELDS) {
+      const val = recoData[field];
+      if (typeof val === "string" && val.trim() === "") recoData[field] = null;
+    }
+
+    const recommendation = await createRecommendation(recoData, user.id);
     return NextResponse.json(recommendation, { status: 201 });
   } catch (error: unknown) {
     if (error && typeof error === "object" && "errors" in error) {

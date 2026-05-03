@@ -28,7 +28,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const body = await request.json();
     const validated = missionSchema.partial().parse(body);
-    const mission = await updateMission(id, validated as Record<string, unknown>, user.id);
+
+    const DATE_FIELDS = ["startDate", "endDate", "reportReceivedAt", "reportValidatedAt"] as const;
+    const missionData: Record<string, unknown> = { ...validated };
+    for (const field of DATE_FIELDS) {
+      if (field in missionData) {
+        const val = missionData[field];
+        missionData[field] = val && typeof val === "string" && val.trim() !== "" ? new Date(val) : null;
+      }
+    }
+
+    const mission = await updateMission(id, missionData, user.id);
     return NextResponse.json(mission);
   } catch (error: unknown) {
     if (error && typeof error === "object" && "errors" in error) {

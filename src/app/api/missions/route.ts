@@ -39,7 +39,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = missionSchema.parse(body);
 
-    const mission = await createMission(validated as Record<string, unknown>, user.id);
+    // Convertit les strings de date en Date|null pour Prisma (DateTime?)
+    const DATE_FIELDS = ["startDate", "endDate", "reportReceivedAt", "reportValidatedAt"] as const;
+    const missionData: Record<string, unknown> = { ...validated };
+    for (const field of DATE_FIELDS) {
+      const val = missionData[field];
+      missionData[field] = val && typeof val === "string" && val.trim() !== "" ? new Date(val) : null;
+    }
+
+    const mission = await createMission(missionData, user.id);
     return NextResponse.json(mission, { status: 201 });
   } catch (error: unknown) {
     if (error && typeof error === "object" && "errors" in error) {

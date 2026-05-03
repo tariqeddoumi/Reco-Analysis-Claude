@@ -28,7 +28,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const body = await request.json();
     const validated = recommendationSchema.partial().parse(body);
-    const recommendation = await updateRecommendation(id, validated as Record<string, unknown>, user.id);
+
+    const DATE_FIELDS = ["issuedAt", "initialDueDate"] as const;
+    const recoData: Record<string, unknown> = { ...validated };
+    for (const field of DATE_FIELDS) {
+      if (field in recoData) {
+        const val = recoData[field];
+        recoData[field] = val && typeof val === "string" && val.trim() !== "" ? new Date(val) : null;
+      }
+    }
+    const NULLABLE_ID_FIELDS = [
+      "directionId","processId","recommendationTypeId","rootCauseTypeId","riskTypeId",
+      "severityId","probabilityId","priorityId","ownerId","operationalResponsibleId",
+      "confidentialityLevelId",
+    ] as const;
+    for (const field of NULLABLE_ID_FIELDS) {
+      if (field in recoData) {
+        const val = recoData[field];
+        if (typeof val === "string" && val.trim() === "") recoData[field] = null;
+      }
+    }
+
+    const recommendation = await updateRecommendation(id, recoData, user.id);
     return NextResponse.json(recommendation);
   } catch (error: unknown) {
     if (error && typeof error === "object" && "errors" in error) {
