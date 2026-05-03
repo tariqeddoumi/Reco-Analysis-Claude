@@ -74,8 +74,10 @@ export async function GET(request: NextRequest) {
         // Aliases utilisés par les formulaires mission/recommandation
         sources: sourceTypes,
         statuses: missionStatuses,
+        recommendationStatuses,
         severities: severityLevels,
         probabilities: probabilityLevels,
+        priorities: priorityLevels,
         directions: [] as unknown[],
         processes: [] as unknown[],
       });

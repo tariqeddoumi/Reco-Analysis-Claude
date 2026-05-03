@@ -55,6 +55,7 @@ interface ReferentialsData {
   sources?: Referential[];
   entities?: Referential[];
   statuses?: Referential[];
+  recommendationStatuses?: Referential[];
   directions?: Referential[];
   processes?: Referential[];
   riskTypes?: Referential[];
@@ -175,7 +176,7 @@ export default function EditRecommendationPage() {
   });
 
   React.useEffect(() => {
-    fetch("/api/admin/referentials?types=sources,entities,statuses,directions,processes,riskTypes,recommendationTypes,rootCauseTypes,severities,probabilities,priorities,confidentialityLevels,users")
+    fetch("/api/admin/referentials?types=sources,entities,recommendationStatuses,directions,processes,riskTypes,recommendationTypes,rootCauseTypes,severities,probabilities,priorities,confidentialityLevels,users")
       .then((r) => r.json())
       .then(setReferentials)
       .catch(console.error);
@@ -402,7 +403,7 @@ export default function EditRecommendationPage() {
                   <Controller name="statusId" control={control} render={({ field }) => (
                     <Select value={field.value ?? ""} onValueChange={field.onChange}>
                       <SelectTrigger className={cn(errors.statusId && "border-destructive")}><SelectValue placeholder="Statut" /></SelectTrigger>
-                      <SelectContent>{referentials.statuses?.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
+                      <SelectContent>{referentials.recommendationStatuses?.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
                     </Select>
                   )} />
                 </FormField>
