@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +28,7 @@ export async function GET(request: NextRequest) {
         entities,
         roles,
         permissions,
+        users,
       ] = await Promise.all([
         prisma.confidentialityLevel.findMany({ where: { isActive: true }, orderBy: { rank: "asc" } }),
         prisma.missionType.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
@@ -46,6 +46,11 @@ export async function GET(request: NextRequest) {
         prisma.entity.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
         prisma.role.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
         prisma.permission.findMany({ where: { isActive: true }, orderBy: [{ module: "asc" }, { label: "asc" }] }),
+        prisma.user.findMany({
+          where: { isActive: true },
+          select: { id: true, firstName: true, lastName: true, email: true },
+          orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+        }),
       ]);
 
       Object.assign(referentials, {
@@ -65,6 +70,14 @@ export async function GET(request: NextRequest) {
         entities,
         roles,
         permissions,
+        users,
+        // Aliases utilisés par les formulaires mission/recommandation
+        sources: sourceTypes,
+        statuses: missionStatuses,
+        severities: severityLevels,
+        probabilities: probabilityLevels,
+        directions: [] as unknown[],
+        processes: [] as unknown[],
       });
     }
 
