@@ -32,6 +32,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { TemporalStatus } from "@/types";
 import {
   ChevronRight,
@@ -271,6 +278,13 @@ export default function RecommendationDetailPage() {
   const [actionPlanForm, setActionPlanForm] = React.useState({ title: "", description: "" });
   const [isSubmittingActionPlan, setIsSubmittingActionPlan] = React.useState(false);
   const [actionPlanError, setActionPlanError] = React.useState<string | null>(null);
+  const [showActionDialog, setShowActionDialog] = React.useState(false);
+  const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(null);
+  const [actionForm, setActionForm] = React.useState({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2 });
+  const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [actionStatuses, setActionStatuses] = React.useState<{ id: string; label: string }[]>([]);
+  const [refUsers, setRefUsers] = React.useState<{ id: string; firstName: string; lastName: string }[]>([]);
 
   const fetchData = React.useCallback(() => {
     if (!id) return;
@@ -283,6 +297,16 @@ export default function RecommendationDetailPage() {
   }, [id]);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
+
+  React.useEffect(() => {
+    fetch("/api/admin/referentials?type=all")
+      .then((r) => r.json())
+      .then((data) => {
+        setActionStatuses(data.actionStatuses ?? []);
+        setRefUsers(data.users ?? []);
+      })
+      .catch(console.error);
+  }, []);
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !id) return;
@@ -323,6 +347,40 @@ export default function RecommendationDetailPage() {
       setActionPlanError(err instanceof Error ? err.message : "Une erreur est survenue");
     } finally {
       setIsSubmittingActionPlan(false);
+    }
+  };
+
+  const handleCreateAction = async () => {
+    if (!actionForm.title.trim() || !actionForm.statusId || !selectedPlanId) return;
+    setIsSubmittingAction(true);
+    setActionError(null);
+    try {
+      const body: Record<string, unknown> = {
+        actionPlanId: selectedPlanId,
+        title: actionForm.title,
+        statusId: actionForm.statusId,
+        priority: actionForm.priority,
+      };
+      if (actionForm.description.trim()) body.description = actionForm.description;
+      if (actionForm.responsibleId) body.responsibleId = actionForm.responsibleId;
+      if (actionForm.plannedEndAt) body.plannedEndAt = actionForm.plannedEndAt;
+      const res = await fetch("/api/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Erreur lors de la création");
+      }
+      setShowActionDialog(false);
+      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2 });
+      setSelectedPlanId(null);
+      fetchData();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Une erreur est survenue");
+    } finally {
+      setIsSubmittingAction(false);
     }
   };
 
@@ -760,6 +818,21 @@ export default function RecommendationDetailPage() {
                       </div>
                     </CardContent>
                   )}
+                  <CardContent className="pt-0 pb-3 border-t border-border">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full gap-1.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setActionError(null);
+                        setSelectedPlanId(plan.id);
+                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2 });
+                        setShowActionDialog(true);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />Ajouter une action
+                    </Button>
+                  </CardContent>
                 </Card>
               ))}
             </div>
@@ -998,6 +1071,77 @@ export default function RecommendationDetailPage() {
             </Button>
             <Button onClick={handleCreateActionPlan} disabled={isSubmittingActionPlan || !actionPlanForm.title.trim()}>
               {isSubmittingActionPlan ? "Création..." : "Créer le plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog création action ── */}
+      <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nouvelle action</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {actionError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{actionError}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Titre <span className="text-destructive">*</span></Label>
+              <Input
+                value={actionForm.title}
+                onChange={(e) => setActionForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Titre de l'action"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Statut <span className="text-destructive">*</span></Label>
+                <Select value={actionForm.statusId} onValueChange={(v) => setActionForm((f) => ({ ...f, statusId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
+                  <SelectContent>
+                    {actionStatuses.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Responsable</Label>
+                <Select value={actionForm.responsibleId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, responsibleId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Responsable (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {refUsers.map((u) => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Échéance prévue</Label>
+                <Input type="date" value={actionForm.plannedEndAt} onChange={(e) => setActionForm((f) => ({ ...f, plannedEndAt: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Priorité (1–5)</Label>
+                <Input type="number" min={1} max={5} value={actionForm.priority} onChange={(e) => setActionForm((f) => ({ ...f, priority: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Description</Label>
+              <Textarea
+                value={actionForm.description}
+                onChange={(e) => setActionForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Description de l'action (optionnel)"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowActionDialog(false)} disabled={isSubmittingAction}>Annuler</Button>
+            <Button onClick={handleCreateAction} disabled={isSubmittingAction || !actionForm.title.trim() || !actionForm.statusId}>
+              {isSubmittingAction ? "Création..." : "Créer l'action"}
             </Button>
           </DialogFooter>
         </DialogContent>
