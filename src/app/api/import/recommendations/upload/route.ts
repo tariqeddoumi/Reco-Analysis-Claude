@@ -3,8 +3,7 @@ import { requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
-import { parseExcelBuffer } from "@/services/excel-parser.service";
-import { validateRows } from "@/services/import-validation.service";
+import { detectColumns, parseWithMapping } from "@/services/excel-parser.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,61 +19,53 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "Fichier manquant" }, { status: 400 });
     }
-
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
       return NextResponse.json({ error: "Format invalide. Seuls les fichiers .xlsx et .xls sont acceptés" }, { status: 400 });
     }
-
-    const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+    const MAX_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       return NextResponse.json({ error: "Fichier trop volumineux (max 10 Mo)" }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    let rawRows;
+    // Detect columns and sample rows
+    let detected;
     try {
-      rawRows = parseExcelBuffer(buffer);
+      detected = detectColumns(buffer);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur de lecture du fichier";
+      const message = err instanceof Error ? err.message : "Erreur de lecture";
       return NextResponse.json({ error: `Impossible de lire le fichier Excel: ${message}` }, { status: 422 });
     }
 
-    if (rawRows.length === 0) {
+    if (detected.columns.length === 0) {
+      return NextResponse.json({ error: "Le fichier ne contient aucune colonne" }, { status: 422 });
+    }
+
+    // Parse ALL raw rows (no mapping applied yet)
+    const allRaw = parseWithMapping(buffer, Object.fromEntries(detected.columns.map((c) => [c, c])));
+
+    if (allRaw.length === 0) {
       return NextResponse.json({ error: "Le fichier ne contient aucune ligne de données" }, { status: 422 });
     }
 
-    const validatedRows = await validateRows(rawRows);
-    const validCount = validatedRows.filter((r) => r.status === "VALID" && !r.isDuplicate).length;
-    const errorCount = validatedRows.filter((r) => r.status === "ERROR").length;
-    const duplicateCount = validatedRows.filter((r) => r.isDuplicate).length;
-
-    // Create the batch record
+    // Create batch in MAPPING status – store raw rows
     const batch = await prisma.importBatch.create({
       data: {
         fileName: file.name,
         uploadedBy: user.id,
-        status: errorCount > 0 ? "VALIDATED_WITH_ERRORS" : "VALIDATED",
-        totalRows: validatedRows.length,
-        validRows: validCount,
-        errorRows: errorCount,
+        status: "MAPPING",
+        totalRows: allRaw.length,
         updatedAt: new Date(),
       },
     });
 
-    // Create batch rows
     await prisma.importBatchRow.createMany({
-      data: validatedRows.map((row) => ({
+      data: allRaw.map((row) => ({
         batchId: batch.id,
         rowNumber: row.rowNumber,
-        rawData: row.rawData as object,
-        status: row.status === "VALID" && !row.isDuplicate
-          ? "VALID"
-          : row.isDuplicate
-            ? "DUPLICATE"
-            : "ERROR",
-        errors: row.errors.length > 0 ? (row.errors as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
-        mappedData: row.mappedData !== null ? (row.mappedData as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+        rawData: row.data as Prisma.InputJsonValue,
+        status: "PENDING",
         updatedAt: new Date(),
       })),
     });
@@ -82,19 +73,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       batchId: batch.id,
       fileName: file.name,
-      totalRows: validatedRows.length,
-      validRows: validCount,
-      errorRows: errorCount,
-      duplicateCount,
-      rows: validatedRows.map((r) => ({
-        rowNumber: r.rowNumber,
-        status: r.isDuplicate ? "DUPLICATE" : r.status,
-        errors: r.errors,
-        mappedData: r.mappedData,
-        rawData: r.rawData,
-        isDuplicate: r.isDuplicate,
-        existingId: r.existingId,
-      })),
+      totalRows: allRaw.length,
+      columns: detected.columns,
+      sampleRows: detected.sampleRows,
     });
   } catch (error) {
     console.error(error);
