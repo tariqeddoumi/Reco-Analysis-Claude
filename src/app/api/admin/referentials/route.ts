@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
         roles,
         permissions,
         users,
+        directions,
+        processes,
       ] = await Promise.all([
         prisma.confidentialityLevel.findMany({ where: { isActive: true }, orderBy: { rank: "asc" } }),
         prisma.missionType.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
@@ -51,6 +53,8 @@ export async function GET(request: NextRequest) {
           select: { id: true, firstName: true, lastName: true, email: true },
           orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
         }),
+        prisma.direction.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
+        prisma.process.findMany({ where: { isActive: true }, orderBy: { label: "asc" } }),
       ]);
 
       Object.assign(referentials, {
@@ -71,14 +75,14 @@ export async function GET(request: NextRequest) {
         roles,
         permissions,
         users,
+        directions,
+        processes,
         // Aliases utilisés par les formulaires mission/recommandation
         sources: sourceTypes,
         statuses: missionStatuses,
         severities: severityLevels,
         probabilities: probabilityLevels,
         priorities: priorityLevels,
-        directions: [] as unknown[],
-        processes: [] as unknown[],
       });
     }
 
