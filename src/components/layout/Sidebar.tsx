@@ -20,6 +20,7 @@ import {
   LogOut,
   Building2,
   FileUp,
+  List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,6 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Administration",
     items: [
       { label: "Utilisateurs", href: "/admin/users", icon: Users },
+      { label: "Référentiels", href: "/admin/referentials", icon: List },
       { label: "Paramétrage", href: "/admin/settings", icon: Settings },
       { label: "Journal d'audit", href: "/audit-log", icon: ScrollText },
     ],
