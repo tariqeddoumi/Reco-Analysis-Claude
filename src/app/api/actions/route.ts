@@ -63,9 +63,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = actionSchema.parse(body);
 
+    const actionData: Record<string, unknown> = { ...validated };
+    const DATE_FIELDS = ["plannedStartAt", "plannedEndAt", "actualEndAt"] as const;
+    for (const field of DATE_FIELDS) {
+      if (field in actionData) {
+        const val = actionData[field];
+        actionData[field] = val && typeof val === "string" && val.trim() !== "" ? new Date(val) : null;
+      }
+    }
+    const NULLABLE_ID_FIELDS = ["responsibleId"] as const;
+    for (const field of NULLABLE_ID_FIELDS) {
+      if (field in actionData) {
+        const val = actionData[field];
+        if (typeof val === "string" && val.trim() === "") actionData[field] = null;
+      }
+    }
+
     const action = await prisma.action.create({
       data: {
-        ...validated,
+        ...actionData,
         createdBy: user.id,
       },
     });
