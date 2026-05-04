@@ -10,6 +10,7 @@ const actionPlanSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   statusCode: z.string().optional(),
+  weight: z.number().int().min(1).max(100).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         ...validated,
         createdBy: user.id,
         statusCode: validated.statusCode ?? "DRAFT",
+        weight: validated.weight ?? 100,
       },
     });
 
