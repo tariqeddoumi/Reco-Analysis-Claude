@@ -39,6 +39,8 @@ export const PERMISSIONS = {
   // Deadline extensions
   EXTENSION_CREATE: "extension:create",
   EXTENSION_VALIDATE: "extension:validate",
+  // Import
+  RECOMMENDATION_IMPORT: "recommendation:import",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

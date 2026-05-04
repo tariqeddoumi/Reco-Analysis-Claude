@@ -401,6 +401,7 @@ model User {
   deadlineExtensionsRequest  DeadlineExtension[] @relation("ExtensionRequester")
   deadlineExtensionsValidate DeadlineExtension[] @relation("ExtensionValidator")
   statusHistory              StatusHistory[]
+  importBatches              ImportBatch[]
 
   @@map("users")
 }
@@ -554,6 +555,7 @@ model Recommendation {
   auditLogs          AuditLog[]
   deadlineExtensions DeadlineExtension[]
   notifications      Notification[]
+  importBatchRows    ImportBatchRow[]
 
   @@map("recommendations")
 }
@@ -837,4 +839,45 @@ model ReportTemplate {
   updatedAt   DateTime @updatedAt
 
   @@map("report_templates")
+}
+
+// ============================================================
+// IMPORT EXCEL
+// ============================================================
+
+model ImportBatch {
+  id            String   @id @default(cuid())
+  fileName      String
+  uploadedBy    String
+  status        String   @default("PENDING")
+  totalRows     Int      @default(0)
+  validRows     Int      @default(0)
+  errorRows     Int      @default(0)
+  importedRows  Int      @default(0)
+  duplicateMode String   @default("BLOCK")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  uploader User             @relation(fields: [uploadedBy], references: [id])
+  rows     ImportBatchRow[]
+
+  @@map("import_batches")
+}
+
+model ImportBatchRow {
+  id               String   @id @default(cuid())
+  batchId          String
+  rowNumber        Int
+  rawData          Json
+  status           String   @default("PENDING")
+  errors           Json?
+  mappedData       Json?
+  recommendationId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  batch          ImportBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  recommendation Recommendation?  @relation(fields: [recommendationId], references: [id])
+
+  @@map("import_batch_rows")
 }

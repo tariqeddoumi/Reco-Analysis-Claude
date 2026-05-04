@@ -61,6 +61,7 @@ export const AUDIT_ACTIONS = {
   REJECT: "REJECT",
   CLOSE: "CLOSE",
   REOPEN: "REOPEN",
+  IMPORT: "IMPORT",
 } as const;
 
 export const AUDIT_MODULES = {
@@ -73,4 +74,5 @@ export const AUDIT_MODULES = {
   REPORTS: "reports",
   ADMIN: "admin",
   NOTIFICATIONS: "notifications",
+  IMPORT: "import",
 } as const;
