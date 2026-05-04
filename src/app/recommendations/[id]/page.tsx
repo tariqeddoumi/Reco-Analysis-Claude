@@ -275,12 +275,12 @@ export default function RecommendationDetailPage() {
   const [newComment, setNewComment] = React.useState("");
   const [isSubmittingComment, setIsSubmittingComment] = React.useState(false);
   const [showActionPlanDialog, setShowActionPlanDialog] = React.useState(false);
-  const [actionPlanForm, setActionPlanForm] = React.useState({ title: "", description: "" });
+  const [actionPlanForm, setActionPlanForm] = React.useState({ title: "", description: "", weight: 100 });
   const [isSubmittingActionPlan, setIsSubmittingActionPlan] = React.useState(false);
   const [actionPlanError, setActionPlanError] = React.useState<string | null>(null);
   const [showActionDialog, setShowActionDialog] = React.useState(false);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(null);
-  const [actionForm, setActionForm] = React.useState({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2 });
+  const [actionForm, setActionForm] = React.useState({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
   const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionStatuses, setActionStatuses] = React.useState<{ id: string; label: string }[]>([]);
@@ -334,14 +334,14 @@ export default function RecommendationDetailPage() {
       const res = await fetch("/api/action-plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recommendationId: id, title: actionPlanForm.title, description: actionPlanForm.description }),
+        body: JSON.stringify({ recommendationId: id, title: actionPlanForm.title, description: actionPlanForm.description, weight: actionPlanForm.weight }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error ?? "Erreur lors de la création");
       }
       setShowActionPlanDialog(false);
-      setActionPlanForm({ title: "", description: "" });
+      setActionPlanForm({ title: "", description: "", weight: 100 });
       fetchData();
     } catch (err) {
       setActionPlanError(err instanceof Error ? err.message : "Une erreur est survenue");
@@ -361,6 +361,7 @@ export default function RecommendationDetailPage() {
         statusId: actionForm.statusId,
         priority: actionForm.priority,
       };
+      body.weight = actionForm.weight;
       if (actionForm.description.trim()) body.description = actionForm.description;
       if (actionForm.responsibleId) body.responsibleId = actionForm.responsibleId;
       if (actionForm.plannedEndAt) body.plannedEndAt = actionForm.plannedEndAt;
@@ -374,7 +375,7 @@ export default function RecommendationDetailPage() {
         throw new Error(err.error ?? "Erreur lors de la création");
       }
       setShowActionDialog(false);
-      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2 });
+      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
       setSelectedPlanId(null);
       fetchData();
     } catch (err) {
@@ -774,7 +775,7 @@ export default function RecommendationDetailPage() {
                             </span>
                           )}
                           <Badge variant="secondary" className="text-xs">
-                            Poids: {plan.weight}%
+                            Poids: {plan.weight ?? 100}%
                           </Badge>
                         </div>
                       </div>
@@ -826,7 +827,7 @@ export default function RecommendationDetailPage() {
                       onClick={() => {
                         setActionError(null);
                         setSelectedPlanId(plan.id);
-                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2 });
+                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
                         setShowActionDialog(true);
                       }}
                     >
@@ -1055,6 +1056,20 @@ export default function RecommendationDetailPage() {
                 autoFocus
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Poids (%)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={actionPlanForm.weight}
+                  onChange={(e) => setActionPlanForm((f) => ({ ...f, weight: Math.min(100, Math.max(1, Number(e.target.value) || 100)) }))}
+                  placeholder="100"
+                />
+                <p className="text-xs text-muted-foreground">Contribution au taux d&apos;avancement global</p>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">Description</Label>
               <Textarea
@@ -1127,6 +1142,19 @@ export default function RecommendationDetailPage() {
                 <Label className="text-sm font-medium">Priorité (1–5)</Label>
                 <Input type="number" min={1} max={5} value={actionForm.priority} onChange={(e) => setActionForm((f) => ({ ...f, priority: Number(e.target.value) }))} />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">
+                Poids (%) <span className="text-muted-foreground font-normal">— contribution au taux du plan</span>
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={actionForm.weight}
+                onChange={(e) => setActionForm((f) => ({ ...f, weight: Math.min(100, Math.max(1, Number(e.target.value) || 100)) }))}
+                placeholder="100"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">Description</Label>
