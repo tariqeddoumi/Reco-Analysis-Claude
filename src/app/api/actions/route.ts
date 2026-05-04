@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...actionData,
         createdBy: user.id,
-      },
+      } as Parameters<typeof prisma.action.create>[0]["data"],
     });
 
     await createAuditLog({

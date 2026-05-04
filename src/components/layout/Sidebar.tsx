@@ -19,6 +19,7 @@ import {
   ChevronRight,
   LogOut,
   Building2,
+  FileUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,6 +43,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Missions", href: "/missions", icon: ClipboardList },
       { label: "Recommandations", href: "/recommendations", icon: ListChecks },
+      { label: "Import Excel", href: "/recommendations/import", icon: FileUp },
       { label: "Plans d'action", href: "/actions", icon: FileCheck2 },
       { label: "Preuves", href: "/evidences", icon: GitBranch },
     ],
