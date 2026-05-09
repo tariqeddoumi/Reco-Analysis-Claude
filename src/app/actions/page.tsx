@@ -20,7 +20,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, getTemporalStatus, getDaysRemaining } from "@/lib/utils";
 import { ActionWithRelations, TemporalStatus } from "@/types";
-import { Eye, Search, RefreshCw, ListTodo } from "lucide-react";
+import { Eye, Search, RefreshCw, ListTodo, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type FilterTab = "all" | "mine" | "overdue" | "blocked";
 
@@ -47,6 +58,7 @@ export default function ActionsPage() {
   const [responsibleId, setResponsibleId] = React.useState("");
 
   const [actionStatuses, setActionStatuses] = React.useState<Referential[]>([]);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [sortBy, setSortBy] = React.useState("plannedEndAt");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
 
@@ -88,6 +100,19 @@ export default function ActionsPage() {
     else { setSortBy(key); setSortOrder("asc"); }
     setPage(1);
   };
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/actions/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setActions((prev) => prev.filter((a) => a.id !== id));
+        setTotal((prev) => prev - 1);
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const filteredActions = React.useMemo(() => {
     let data = [...actions];
@@ -205,17 +230,49 @@ export default function ActionsPage() {
       className: "text-right",
       headerClassName: "text-right",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push(`/actions/${row.id}`);
-          }}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/actions/${row.id}`);
+            }}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => e.stopPropagation()}
+                disabled={deletingId === row.id}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer cette action?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action sera archivée et ne sera plus visible. Cette opération est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       ),
     },
   ];

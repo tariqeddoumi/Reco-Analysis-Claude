@@ -16,11 +16,31 @@ interface AppUser {
 interface AppLayoutProps {
   children: React.ReactNode;
   user?: AppUser | null;
-  unreadNotifications?: number;
 }
 
-export function AppLayout({ children, user, unreadNotifications = 0 }: AppLayoutProps) {
+const POLL_INTERVAL_MS = 60_000;
+
+export function AppLayout({ children, user }: AppLayoutProps) {
   const router = useRouter();
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  React.useEffect(() => {
+    async function fetchUnread() {
+      try {
+        const res = await fetch("/api/notifications?unreadOnly=true", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadCount(data.unreadCount ?? 0);
+        }
+      } catch {
+        // non-blocking — badge stays at last known value
+      }
+    }
+
+    fetchUnread();
+    const timer = setInterval(fetchUnread, POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -31,19 +51,15 @@ export function AppLayout({ children, user, unreadNotifications = 0 }: AppLayout
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
       <Sidebar user={user} onLogout={handleLogout} />
 
-      {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Top header */}
         <Header
           user={user}
-          unreadNotifications={unreadNotifications}
+          unreadNotifications={unreadCount}
           onLogout={handleLogout}
         />
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-muted/30">
           <div className="p-6 animate-fade-in">
             {children}

@@ -15,10 +15,21 @@ export async function GET(request: NextRequest) {
     const statusId = searchParams.get("statusId") || undefined;
     const search = searchParams.get("search") || undefined;
 
+    const sortBy = searchParams.get("sortBy") || "plannedEndAt";
+    const sortOrder = searchParams.get("sortOrder") === "desc" ? "desc" : "asc";
+    const actionPlanId = searchParams.get("actionPlanId") || undefined;
+    const isOverdue = searchParams.get("isOverdue") === "true";
+
+    const ALLOWED_SORT = ["plannedEndAt", "plannedStartAt", "createdAt", "progressRate", "priority", "title"] as const;
+    type AllowedSort = (typeof ALLOWED_SORT)[number];
+    const safeSortBy: AllowedSort = ALLOWED_SORT.includes(sortBy as AllowedSort) ? (sortBy as AllowedSort) : "plannedEndAt";
+
     const where: Record<string, unknown> = { isDeleted: false };
     if (responsibleId) where.responsibleId = responsibleId;
     if (statusId) where.statusId = statusId;
+    if (actionPlanId) where.actionPlanId = actionPlanId;
     if (search) where.title = { contains: search, mode: "insensitive" };
+    if (isOverdue) where.plannedEndAt = { lt: new Date() };
 
     const [total, data] = await Promise.all([
       prisma.action.count({ where }),
@@ -39,7 +50,7 @@ export async function GET(request: NextRequest) {
           },
           evidences: { where: { isDeleted: false }, select: { id: true, statusCode: true } },
         },
-        orderBy: { plannedEndAt: "asc" },
+        orderBy: { [safeSortBy]: sortOrder },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

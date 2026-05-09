@@ -136,3 +136,39 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireDbUser();
+    const { id } = await params;
+
+    if (!hasPermission(user, PERMISSIONS.ACTION_DELETE)) {
+      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
+    }
+
+    const action = await prisma.action.findFirst({ where: { id, isDeleted: false } });
+    if (!action) return NextResponse.json({ error: "Action introuvable" }, { status: 404 });
+
+    await prisma.action.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date(), deletedBy: user.id },
+    });
+
+    await createAuditLog({
+      userId: user.id,
+      entityType: "Action",
+      entityId: id,
+      actionId: id,
+      action: AUDIT_ACTIONS.DELETE,
+      module: AUDIT_MODULES.ACTIONS,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
