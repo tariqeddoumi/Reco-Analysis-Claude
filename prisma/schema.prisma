@@ -138,6 +138,7 @@ model PriorityLevel {
   updatedAt    DateTime @updatedAt
 
   recommendations Recommendation[]
+  actions         Action[]
 
   @@map("priority_levels")
 }
@@ -259,6 +260,51 @@ model WorkflowStep {
   updatedAt         DateTime @updatedAt
 
   @@map("workflow_steps")
+}
+
+model ComplexityLevel {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions Action[]
+
+  @@map("complexity_levels")
+}
+
+model EffortLevel {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions Action[]
+
+  @@map("effort_levels")
+}
+
+model EvidenceStatus {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  color       String?
+  rank        Int?
+  isFinal     Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("evidence_statuses")
 }
 
 model ParameterSetting {
@@ -591,34 +637,40 @@ model ActionPlan {
 }
 
 model Action {
-  id              String    @id @default(cuid())
-  actionPlanId    String
-  title           String
-  description     String?
-  responsibleId   String?
-  statusId        String
-  priority        Int       @default(2)
-  progressRate    Int       @default(0)
-  weight          Int       @default(100)
-  estimatedEffort String?
-  complexity      String?
-  plannedStartAt  DateTime?
-  plannedEndAt    DateTime?
-  actualEndAt     DateTime?
-  deliverable     String?
-  expectedProof   String?
-  blockReason     String?
-  comment         String?
-  isDeleted       Boolean   @default(false)
-  deletedAt       DateTime?
-  deletedBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdBy       String?
+  id                 String    @id @default(cuid())
+  actionPlanId       String
+  title              String
+  description        String?
+  responsibleId      String?
+  statusId           String
+  priority           Int       @default(2)
+  priorityLevelId    String?
+  progressRate       Int       @default(0)
+  weight             Int       @default(100)
+  estimatedEffort    String?
+  effortLevelId      String?
+  complexity         String?
+  complexityLevelId  String?
+  plannedStartAt     DateTime?
+  plannedEndAt       DateTime?
+  actualEndAt        DateTime?
+  deliverable        String?
+  expectedProof      String?
+  blockReason        String?
+  comment            String?
+  isDeleted          Boolean   @default(false)
+  deletedAt          DateTime?
+  deletedBy          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdBy          String?
 
-  actionPlan  ActionPlan   @relation(fields: [actionPlanId], references: [id])
-  responsible User?        @relation(fields: [responsibleId], references: [id])
-  status      ActionStatus @relation(fields: [statusId], references: [id])
+  actionPlan       ActionPlan      @relation(fields: [actionPlanId], references: [id])
+  responsible      User?           @relation(fields: [responsibleId], references: [id])
+  status           ActionStatus    @relation(fields: [statusId], references: [id])
+  priorityLevel    PriorityLevel?  @relation(fields: [priorityLevelId], references: [id])
+  complexityLevel  ComplexityLevel? @relation(fields: [complexityLevelId], references: [id])
+  effortLevel      EffortLevel?    @relation(fields: [effortLevelId], references: [id])
 
   evidences          Evidence[]
   comments           Comment[]

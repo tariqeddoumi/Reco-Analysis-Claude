@@ -296,10 +296,17 @@ export default function RecommendationDetailPage() {
   const [deletingPlanId, setDeletingPlanId] = React.useState<string | null>(null);
   const [showActionDialog, setShowActionDialog] = React.useState(false);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(null);
-  const [actionForm, setActionForm] = React.useState({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
+  const [actionForm, setActionForm] = React.useState({
+    title: "", description: "", statusId: "", responsibleId: "",
+    plannedEndAt: "", priority: 2, priorityLevelId: "",
+    weight: 100, effortLevelId: "", complexityLevelId: "",
+  });
   const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionStatuses, setActionStatuses] = React.useState<{ id: string; label: string }[]>([]);
+  const [priorityLevels, setPriorityLevels] = React.useState<{ id: string; label: string }[]>([]);
+  const [complexityLevels, setComplexityLevels] = React.useState<{ id: string; label: string }[]>([]);
+  const [effortLevels, setEffortLevels] = React.useState<{ id: string; label: string }[]>([]);
   const [refUsers, setRefUsers] = React.useState<{ id: string; firstName: string; lastName: string }[]>([]);
 
   const fetchData = React.useCallback(() => {
@@ -319,6 +326,9 @@ export default function RecommendationDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         setActionStatuses(data.actionStatuses ?? []);
+        setPriorityLevels(data.priorityLevels ?? []);
+        setComplexityLevels(data.complexityLevels ?? []);
+        setEffortLevels(data.effortLevels ?? []);
         setRefUsers(data.users ?? []);
       })
       .catch(console.error);
@@ -401,11 +411,14 @@ export default function RecommendationDetailPage() {
         title: actionForm.title,
         statusId: actionForm.statusId,
         priority: actionForm.priority,
+        weight: actionForm.weight,
       };
-      body.weight = actionForm.weight;
       if (actionForm.description.trim()) body.description = actionForm.description;
       if (actionForm.responsibleId) body.responsibleId = actionForm.responsibleId;
       if (actionForm.plannedEndAt) body.plannedEndAt = actionForm.plannedEndAt;
+      if (actionForm.priorityLevelId) body.priorityLevelId = actionForm.priorityLevelId;
+      if (actionForm.complexityLevelId) body.complexityLevelId = actionForm.complexityLevelId;
+      if (actionForm.effortLevelId) body.effortLevelId = actionForm.effortLevelId;
       const res = await fetch("/api/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -416,7 +429,7 @@ export default function RecommendationDetailPage() {
         throw new Error(err.error ?? "Erreur lors de la création");
       }
       setShowActionDialog(false);
-      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
+      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, priorityLevelId: "", weight: 100, effortLevelId: "", complexityLevelId: "" });
       setSelectedPlanId(null);
       fetchData();
     } catch (err) {
@@ -908,7 +921,7 @@ export default function RecommendationDetailPage() {
                       onClick={() => {
                         setActionError(null);
                         setSelectedPlanId(plan.id);
-                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
+                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, priorityLevelId: "", weight: 100, effortLevelId: "", complexityLevelId: "" });
                         setShowActionDialog(true);
                       }}
                     >
@@ -1267,8 +1280,36 @@ export default function RecommendationDetailPage() {
                 <Input type="date" value={actionForm.plannedEndAt} onChange={(e) => setActionForm((f) => ({ ...f, plannedEndAt: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Priorité (1–5)</Label>
-                <Input type="number" min={1} max={5} value={actionForm.priority} onChange={(e) => setActionForm((f) => ({ ...f, priority: Number(e.target.value) }))} />
+                <Label className="text-sm font-medium">Priorité</Label>
+                <Select value={actionForm.priorityLevelId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, priorityLevelId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Priorité (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {priorityLevels.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Complexité</Label>
+                <Select value={actionForm.complexityLevelId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, complexityLevelId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Complexité (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {complexityLevels.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Effort estimé</Label>
+                <Select value={actionForm.effortLevelId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, effortLevelId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Effort (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {effortLevels.map((e) => <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">

@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         actionData[field] = val && typeof val === "string" && val.trim() !== "" ? new Date(val) : null;
       }
     }
-    const NULLABLE_ID_FIELDS = ["responsibleId"] as const;
+    const NULLABLE_ID_FIELDS = ["responsibleId", "priorityLevelId", "complexityLevelId", "effortLevelId"] as const;
     for (const field of NULLABLE_ID_FIELDS) {
       if (field in actionData) {
         const val = actionData[field];
