@@ -286,6 +286,93 @@ const REF_CONFIGS: Record<string, RefConfig> = {
       { key: "category", label: "Catégorie", type: "text" },
     ],
   },
+  complexityLevels: {
+    title: "Niveaux de Complexité",
+    tableColumns: [
+      { key: "code", label: "Code" },
+      { key: "label", label: "Libellé" },
+      { key: "rank", label: "Rang" },
+      { key: "description", label: "Description" },
+    ],
+    fields: [
+      { key: "code", label: "Code", type: "text", required: true, placeholder: "EX: HIGH" },
+      { key: "label", label: "Libellé", type: "text", required: true },
+      { key: "rank", label: "Rang", type: "number" },
+      { key: "description", label: "Description", type: "text" },
+    ],
+  },
+  effortLevels: {
+    title: "Niveaux d'Effort",
+    tableColumns: [
+      { key: "code", label: "Code" },
+      { key: "label", label: "Libellé" },
+      { key: "rank", label: "Rang" },
+      { key: "description", label: "Description" },
+    ],
+    fields: [
+      { key: "code", label: "Code", type: "text", required: true, placeholder: "EX: 1_WEEK" },
+      { key: "label", label: "Libellé", type: "text", required: true },
+      { key: "rank", label: "Rang", type: "number" },
+      { key: "description", label: "Description", type: "text" },
+    ],
+  },
+  evidenceStatuses: {
+    title: "Statuts de Preuves",
+    tableColumns: [
+      { key: "code", label: "Code" },
+      { key: "label", label: "Libellé" },
+      { key: "rank", label: "Rang" },
+      { key: "color", label: "Couleur", render: colorCell },
+      { key: "isFinal", label: "Final", render: (v) => boolCell(v) },
+    ],
+    fields: [
+      { key: "code", label: "Code", type: "text", required: true, placeholder: "EX: ACCEPTED" },
+      { key: "label", label: "Libellé", type: "text", required: true },
+      { key: "rank", label: "Rang", type: "number" },
+      { key: "color", label: "Couleur (hex)", type: "color" },
+      { key: "description", label: "Description", type: "text" },
+      { key: "isFinal", label: "Statut final", type: "boolean" },
+    ],
+  },
+  workflowSteps: {
+    title: "Étapes de Workflow",
+    tableColumns: [
+      { key: "code", label: "Code" },
+      { key: "label", label: "Libellé" },
+      { key: "entityType", label: "Type d'entité" },
+      { key: "fromStatus", label: "De statut" },
+      { key: "toStatus", label: "Vers statut" },
+      { key: "rank", label: "Rang" },
+    ],
+    fields: [
+      { key: "code", label: "Code", type: "text", required: true },
+      { key: "label", label: "Libellé", type: "text", required: true },
+      { key: "entityType", label: "Type d'entité", type: "text", required: true, placeholder: "EX: RECOMMENDATION" },
+      { key: "fromStatus", label: "Statut source", type: "text", required: true, placeholder: "EX: DRAFT" },
+      { key: "toStatus", label: "Statut cible", type: "text", required: true, placeholder: "EX: IN_PROGRESS" },
+      { key: "rank", label: "Rang", type: "number" },
+      { key: "description", label: "Description", type: "text" },
+      { key: "requiresProof", label: "Preuve obligatoire", type: "boolean" },
+      { key: "requiresComment", label: "Commentaire obligatoire", type: "boolean" },
+      { key: "requiresHierarchy", label: "Validation hiérarchique", type: "boolean" },
+    ],
+  },
+  escalationRules: {
+    title: "Règles d'Escalade",
+    tableColumns: [
+      { key: "code", label: "Code" },
+      { key: "label", label: "Libellé" },
+      { key: "daysBeforeDue", label: "Jours avant échéance" },
+      { key: "escalationLevel", label: "Niveau" },
+    ],
+    fields: [
+      { key: "code", label: "Code", type: "text", required: true },
+      { key: "label", label: "Libellé", type: "text", required: true },
+      { key: "daysBeforeDue", label: "Jours avant échéance", type: "number", required: true, placeholder: "EX: 7" },
+      { key: "escalationLevel", label: "Niveau d'escalade", type: "number" },
+      { key: "description", label: "Description", type: "text" },
+    ],
+  },
 };
 
 // ─── Field renderer in dialog ──────────────────────────────────────────────────

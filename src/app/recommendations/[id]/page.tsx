@@ -64,7 +64,19 @@ import {
   ThumbsUp,
   ThumbsDown,
   Plus,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 /* ─────────────────────────── Types ─────────────────────────── */
 
@@ -278,12 +290,23 @@ export default function RecommendationDetailPage() {
   const [actionPlanForm, setActionPlanForm] = React.useState({ title: "", description: "", weight: 100 });
   const [isSubmittingActionPlan, setIsSubmittingActionPlan] = React.useState(false);
   const [actionPlanError, setActionPlanError] = React.useState<string | null>(null);
+  const [editingPlanId, setEditingPlanId] = React.useState<string | null>(null);
+  const [editPlanForm, setEditPlanForm] = React.useState({ title: "", description: "", weight: 100 });
+  const [isSubmittingEditPlan, setIsSubmittingEditPlan] = React.useState(false);
+  const [deletingPlanId, setDeletingPlanId] = React.useState<string | null>(null);
   const [showActionDialog, setShowActionDialog] = React.useState(false);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(null);
-  const [actionForm, setActionForm] = React.useState({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
+  const [actionForm, setActionForm] = React.useState({
+    title: "", description: "", statusId: "", responsibleId: "",
+    plannedEndAt: "", priority: 2, priorityLevelId: "",
+    weight: 100, effortLevelId: "", complexityLevelId: "",
+  });
   const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionStatuses, setActionStatuses] = React.useState<{ id: string; label: string }[]>([]);
+  const [priorityLevels, setPriorityLevels] = React.useState<{ id: string; label: string }[]>([]);
+  const [complexityLevels, setComplexityLevels] = React.useState<{ id: string; label: string }[]>([]);
+  const [effortLevels, setEffortLevels] = React.useState<{ id: string; label: string }[]>([]);
   const [refUsers, setRefUsers] = React.useState<{ id: string; firstName: string; lastName: string }[]>([]);
 
   const fetchData = React.useCallback(() => {
@@ -303,6 +326,9 @@ export default function RecommendationDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         setActionStatuses(data.actionStatuses ?? []);
+        setPriorityLevels(data.priorityLevels ?? []);
+        setComplexityLevels(data.complexityLevels ?? []);
+        setEffortLevels(data.effortLevels ?? []);
         setRefUsers(data.users ?? []);
       })
       .catch(console.error);
@@ -350,6 +376,31 @@ export default function RecommendationDetailPage() {
     }
   };
 
+  const handleEditPlan = async () => {
+    if (!editingPlanId || !editPlanForm.title.trim()) return;
+    setIsSubmittingEditPlan(true);
+    try {
+      const res = await fetch(`/api/action-plans/${editingPlanId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editPlanForm.title, description: editPlanForm.description, weight: editPlanForm.weight }),
+      });
+      if (res.ok) { setEditingPlanId(null); fetchData(); }
+    } finally {
+      setIsSubmittingEditPlan(false);
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    setDeletingPlanId(planId);
+    try {
+      const res = await fetch(`/api/action-plans/${planId}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } finally {
+      setDeletingPlanId(null);
+    }
+  };
+
   const handleCreateAction = async () => {
     if (!actionForm.title.trim() || !actionForm.statusId || !selectedPlanId) return;
     setIsSubmittingAction(true);
@@ -360,11 +411,14 @@ export default function RecommendationDetailPage() {
         title: actionForm.title,
         statusId: actionForm.statusId,
         priority: actionForm.priority,
+        weight: actionForm.weight,
       };
-      body.weight = actionForm.weight;
       if (actionForm.description.trim()) body.description = actionForm.description;
       if (actionForm.responsibleId) body.responsibleId = actionForm.responsibleId;
       if (actionForm.plannedEndAt) body.plannedEndAt = actionForm.plannedEndAt;
+      if (actionForm.priorityLevelId) body.priorityLevelId = actionForm.priorityLevelId;
+      if (actionForm.complexityLevelId) body.complexityLevelId = actionForm.complexityLevelId;
+      if (actionForm.effortLevelId) body.effortLevelId = actionForm.effortLevelId;
       const res = await fetch("/api/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -375,7 +429,7 @@ export default function RecommendationDetailPage() {
         throw new Error(err.error ?? "Erreur lors de la création");
       }
       setShowActionDialog(false);
-      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
+      setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, priorityLevelId: "", weight: 100, effortLevelId: "", complexityLevelId: "" });
       setSelectedPlanId(null);
       fetchData();
     } catch (err) {
@@ -779,8 +833,48 @@ export default function RecommendationDetailPage() {
                           </Badge>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold">{plan.progressRate}%</p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <p className="text-sm font-bold mr-2">{plan.progressRate}%</p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setEditPlanForm({ title: plan.title, description: "", weight: plan.weight ?? 100 });
+                            setEditingPlanId(plan.id);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={deletingPlanId === plan.id}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer ce plan d&apos;action?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Le plan et toutes ses actions seront archivés. Cette opération est irréversible.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeletePlan(plan.id)}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                     <Progress value={plan.progressRate} className="h-1.5 mt-2" />
@@ -827,7 +921,7 @@ export default function RecommendationDetailPage() {
                       onClick={() => {
                         setActionError(null);
                         setSelectedPlanId(plan.id);
-                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, weight: 100 });
+                        setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, priorityLevelId: "", weight: 100, effortLevelId: "", complexityLevelId: "" });
                         setShowActionDialog(true);
                       }}
                     >
@@ -1091,6 +1185,53 @@ export default function RecommendationDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog édition plan d'action ── */}
+      <Dialog open={!!editingPlanId} onOpenChange={(open) => { if (!open) setEditingPlanId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier le plan d&apos;action</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Titre <span className="text-destructive">*</span></Label>
+              <Input
+                value={editPlanForm.title}
+                onChange={(e) => setEditPlanForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Titre du plan d'action"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Poids (%)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={editPlanForm.weight}
+                onChange={(e) => setEditPlanForm((f) => ({ ...f, weight: Math.min(100, Math.max(1, Number(e.target.value) || 100)) }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Description</Label>
+              <Textarea
+                value={editPlanForm.description}
+                onChange={(e) => setEditPlanForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Description (optionnel)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPlanId(null)} disabled={isSubmittingEditPlan}>
+              Annuler
+            </Button>
+            <Button onClick={handleEditPlan} disabled={isSubmittingEditPlan || !editPlanForm.title.trim()}>
+              {isSubmittingEditPlan ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Dialog création action ── */}
       <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
         <DialogContent className="sm:max-w-lg">
@@ -1139,8 +1280,36 @@ export default function RecommendationDetailPage() {
                 <Input type="date" value={actionForm.plannedEndAt} onChange={(e) => setActionForm((f) => ({ ...f, plannedEndAt: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Priorité (1–5)</Label>
-                <Input type="number" min={1} max={5} value={actionForm.priority} onChange={(e) => setActionForm((f) => ({ ...f, priority: Number(e.target.value) }))} />
+                <Label className="text-sm font-medium">Priorité</Label>
+                <Select value={actionForm.priorityLevelId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, priorityLevelId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Priorité (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {priorityLevels.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Complexité</Label>
+                <Select value={actionForm.complexityLevelId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, complexityLevelId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Complexité (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {complexityLevels.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Effort estimé</Label>
+                <Select value={actionForm.effortLevelId || "none"} onValueChange={(v) => setActionForm((f) => ({ ...f, effortLevelId: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Effort (opt.)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {effortLevels.map((e) => <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">

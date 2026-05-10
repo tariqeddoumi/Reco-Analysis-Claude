@@ -138,6 +138,7 @@ model PriorityLevel {
   updatedAt    DateTime @updatedAt
 
   recommendations Recommendation[]
+  actions         Action[]
 
   @@map("priority_levels")
 }
@@ -259,6 +260,51 @@ model WorkflowStep {
   updatedAt         DateTime @updatedAt
 
   @@map("workflow_steps")
+}
+
+model ComplexityLevel {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions Action[]
+
+  @@map("complexity_levels")
+}
+
+model EffortLevel {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  rank        Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions Action[]
+
+  @@map("effort_levels")
+}
+
+model EvidenceStatus {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String?
+  color       String?
+  rank        Int?
+  isFinal     Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("evidence_statuses")
 }
 
 model ParameterSetting {
@@ -557,6 +603,10 @@ model Recommendation {
   notifications      Notification[]
   importBatchRows    ImportBatchRow[]
 
+  @@index([isDeleted, statusId])
+  @@index([isDeleted, entityId])
+  @@index([isDeleted, missionId])
+  @@index([isDeleted, initialDueDate])
   @@map("recommendations")
 }
 
@@ -582,36 +632,45 @@ model ActionPlan {
   recommendation Recommendation @relation(fields: [recommendationId], references: [id])
   actions        Action[]
 
+  @@index([isDeleted, recommendationId])
   @@map("action_plans")
 }
 
 model Action {
-  id              String    @id @default(cuid())
-  actionPlanId    String
-  title           String
-  description     String?
-  responsibleId   String?
-  statusId        String
-  priority        Int       @default(2)
-  progressRate    Int       @default(0)
-  weight          Int       @default(100)
-  estimatedEffort String?
-  complexity      String?
-  plannedStartAt  DateTime?
-  plannedEndAt    DateTime?
-  actualEndAt     DateTime?
-  deliverable     String?
-  expectedProof   String?
-  blockReason     String?
-  comment         String?
-  isDeleted       Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdBy       String?
+  id                 String    @id @default(cuid())
+  actionPlanId       String
+  title              String
+  description        String?
+  responsibleId      String?
+  statusId           String
+  priority           Int       @default(2)
+  priorityLevelId    String?
+  progressRate       Int       @default(0)
+  weight             Int       @default(100)
+  estimatedEffort    String?
+  effortLevelId      String?
+  complexity         String?
+  complexityLevelId  String?
+  plannedStartAt     DateTime?
+  plannedEndAt       DateTime?
+  actualEndAt        DateTime?
+  deliverable        String?
+  expectedProof      String?
+  blockReason        String?
+  comment            String?
+  isDeleted          Boolean   @default(false)
+  deletedAt          DateTime?
+  deletedBy          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdBy          String?
 
-  actionPlan  ActionPlan   @relation(fields: [actionPlanId], references: [id])
-  responsible User?        @relation(fields: [responsibleId], references: [id])
-  status      ActionStatus @relation(fields: [statusId], references: [id])
+  actionPlan       ActionPlan      @relation(fields: [actionPlanId], references: [id])
+  responsible      User?           @relation(fields: [responsibleId], references: [id])
+  status           ActionStatus    @relation(fields: [statusId], references: [id])
+  priorityLevel    PriorityLevel?  @relation(fields: [priorityLevelId], references: [id])
+  complexityLevel  ComplexityLevel? @relation(fields: [complexityLevelId], references: [id])
+  effortLevel      EffortLevel?    @relation(fields: [effortLevelId], references: [id])
 
   evidences          Evidence[]
   comments           Comment[]
@@ -620,6 +679,9 @@ model Action {
   auditLogs          AuditLog[]
   deadlineExtensions DeadlineExtension[]
 
+  @@index([isDeleted, actionPlanId])
+  @@index([isDeleted, responsibleId])
+  @@index([isDeleted, plannedEndAt])
   @@map("actions")
 }
 
@@ -657,6 +719,8 @@ model Evidence {
 
   auditLogs AuditLog[]
 
+  @@index([isDeleted, recommendationId])
+  @@index([isDeleted, actionId])
   @@map("evidences")
 }
 
@@ -789,6 +853,7 @@ model Notification {
   user           User            @relation(fields: [userId], references: [id])
   recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
 
+  @@index([userId, isRead])
   @@map("notifications")
 }
 
@@ -820,6 +885,8 @@ model AuditLog {
   actionRef      Action?         @relation(fields: [actionId], references: [id])
   evidence       Evidence?       @relation(fields: [evidenceId], references: [id])
 
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
   @@map("audit_logs")
 }
 
@@ -880,5 +947,6 @@ model ImportBatchRow {
   batch          ImportBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
   recommendation Recommendation?  @relation(fields: [recommendationId], references: [id])
 
+  @@index([batchId, status])
   @@map("import_batch_rows")
 }

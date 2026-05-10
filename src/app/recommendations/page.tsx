@@ -33,7 +33,19 @@ import {
   ChevronUp,
   Shield,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Referential {
   id: string;
@@ -82,6 +94,7 @@ export default function RecommendationsPage() {
   const [isExporting, setIsExporting] = React.useState(false);
 
   const [referentials, setReferentials] = React.useState<ReferentialsData>({});
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   // Debounce search
   React.useEffect(() => {
@@ -178,6 +191,19 @@ export default function RecommendationsPage() {
       setIsExporting(false);
     }
   };
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/recommendations/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setRecommendations((prev) => prev.filter((r) => r.id !== id));
+        setTotal((prev) => prev - 1);
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const getRowClass = (row: RecommendationWithRelations): string => {
     const dueDate = row.revisedDueDate ?? row.initialDueDate;
@@ -308,14 +334,46 @@ export default function RecommendationsPage() {
       className: "text-right",
       headerClassName: "text-right",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={(e) => { e.stopPropagation(); router.push(`/recommendations/${row.id}`); }}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => { e.stopPropagation(); router.push(`/recommendations/${row.id}`); }}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => e.stopPropagation()}
+                disabled={deletingId === row.id}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer la recommandation {row.code}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette recommandation et ses plans d&apos;action associés seront archivés. Cette opération est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       ),
     },
   ];

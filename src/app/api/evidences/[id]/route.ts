@@ -5,11 +5,10 @@ import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_MODULES } from "@/lib/audit";
 import { z } from "zod";
 
-const actionPlanUpdateSchema = z.object({
+const evidenceUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
-  statusCode: z.string().optional(),
-  progressRate: z.number().min(0).max(100).optional(),
+  evidenceTypeId: z.string().optional(),
 });
 
 export async function GET(
@@ -20,39 +19,28 @@ export async function GET(
     await requireDbUser();
     const { id } = await params;
 
-    const actionPlan = await prisma.actionPlan.findFirst({
+    const evidence = await prisma.evidence.findFirst({
       where: { id, isDeleted: false },
       include: {
-        recommendation: {
-          include: { entity: true, source: true },
-        },
-        actions: {
-          where: { isDeleted: false },
-          include: {
-            status: true,
-            responsible: true,
-            evidences: {
-              where: { isDeleted: false },
-              select: { id: true, statusCode: true },
-            },
-          },
-          orderBy: { priority: "asc" },
-        },
+        evidenceType: true,
+        depositor: { select: { id: true, firstName: true, lastName: true, email: true } },
+        recommendation: { select: { id: true, code: true } },
+        action: { select: { id: true, title: true } },
       },
     });
 
-    if (!actionPlan) {
-      return NextResponse.json({ error: "Plan d'action introuvable" }, { status: 404 });
+    if (!evidence) {
+      return NextResponse.json({ error: "Élément de preuve introuvable" }, { status: 404 });
     }
 
-    return NextResponse.json(actionPlan);
+    return NextResponse.json(evidence);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
-export async function PUT(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -60,36 +48,34 @@ export async function PUT(
     const user = await requireDbUser();
     const { id } = await params;
 
-    if (!hasPermission(user, PERMISSIONS.ACTION_PLAN_UPDATE)) {
+    if (!hasPermission(user, PERMISSIONS.EVIDENCE_CREATE)) {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
     }
 
     const body = await request.json();
-    const old = await prisma.actionPlan.findUnique({ where: { id } });
-    const validated = actionPlanUpdateSchema.parse(body);
+    const old = await prisma.evidence.findFirst({ where: { id, isDeleted: false } });
+    if (!old) return NextResponse.json({ error: "Élément de preuve introuvable" }, { status: 404 });
 
-    const actionPlan = await prisma.actionPlan.update({
+    const validated = evidenceUpdateSchema.parse(body);
+
+    const evidence = await prisma.evidence.update({
       where: { id },
       data: validated,
-      include: {
-        actions: {
-          where: { isDeleted: false },
-          include: { status: true, responsible: true },
-        },
-      },
+      include: { evidenceType: true, depositor: { select: { id: true, firstName: true, lastName: true, email: true } } },
     });
 
     await createAuditLog({
       userId: user.id,
-      entityType: "ActionPlan",
+      entityType: "Evidence",
       entityId: id,
+      evidenceId: id,
       action: AUDIT_ACTIONS.UPDATE,
-      module: AUDIT_MODULES.ACTIONS,
+      module: AUDIT_MODULES.EVIDENCES,
       oldValues: old as unknown as Record<string, unknown>,
       newValues: validated as Record<string, unknown>,
     });
 
-    return NextResponse.json(actionPlan);
+    return NextResponse.json(evidence);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -104,31 +90,25 @@ export async function DELETE(
     const user = await requireDbUser();
     const { id } = await params;
 
-    if (!hasPermission(user, PERMISSIONS.ACTION_PLAN_UPDATE)) {
+    if (!hasPermission(user, PERMISSIONS.EVIDENCE_CREATE)) {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
     }
 
-    const plan = await prisma.actionPlan.findFirst({ where: { id, isDeleted: false } });
-    if (!plan) return NextResponse.json({ error: "Plan introuvable" }, { status: 404 });
+    const evidence = await prisma.evidence.findFirst({ where: { id, isDeleted: false } });
+    if (!evidence) return NextResponse.json({ error: "Élément de preuve introuvable" }, { status: 404 });
 
-    // Soft-delete the plan and its actions
-    await prisma.$transaction([
-      prisma.action.updateMany({
-        where: { actionPlanId: id, isDeleted: false },
-        data: { isDeleted: true, deletedAt: new Date(), deletedBy: user.id },
-      }),
-      prisma.actionPlan.update({
-        where: { id },
-        data: { isDeleted: true },
-      }),
-    ]);
+    await prisma.evidence.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
 
     await createAuditLog({
       userId: user.id,
-      entityType: "ActionPlan",
+      entityType: "Evidence",
       entityId: id,
+      evidenceId: id,
       action: AUDIT_ACTIONS.DELETE,
-      module: AUDIT_MODULES.ACTIONS,
+      module: AUDIT_MODULES.EVIDENCES,
     });
 
     return NextResponse.json({ success: true });

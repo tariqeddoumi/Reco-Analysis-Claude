@@ -84,6 +84,31 @@ const TYPE_CONFIG: Record<string, {
     allowedFields: ["code", "label", "category", "isActive"],
     requiredFields: ["code", "label"],
   },
+  complexityLevels: {
+    orderBy: { rank: "asc" },
+    allowedFields: ["code", "label", "description", "rank", "isActive"],
+    requiredFields: ["code", "label"],
+  },
+  effortLevels: {
+    orderBy: { rank: "asc" },
+    allowedFields: ["code", "label", "description", "rank", "isActive"],
+    requiredFields: ["code", "label"],
+  },
+  evidenceStatuses: {
+    orderBy: { rank: "asc" },
+    allowedFields: ["code", "label", "description", "color", "rank", "isFinal", "isActive"],
+    requiredFields: ["code", "label"],
+  },
+  workflowSteps: {
+    orderBy: { rank: "asc" },
+    allowedFields: ["code", "label", "description", "entityType", "fromStatus", "toStatus", "rank", "requiresProof", "requiresComment", "requiresHierarchy", "isActive"],
+    requiredFields: ["code", "label", "entityType", "fromStatus", "toStatus"],
+  },
+  escalationRules: {
+    orderBy: { escalationLevel: "asc" },
+    allowedFields: ["code", "label", "description", "daysBeforeDue", "escalationLevel", "isActive"],
+    requiredFields: ["code", "label", "daysBeforeDue"],
+  },
 };
 
 // Maps type key to prisma delegate
@@ -105,6 +130,11 @@ function getDelegate(type: string): any {
     confidentialityLevels: prisma.confidentialityLevel,
     directions: prisma.direction,
     processes: prisma.process,
+    complexityLevels: prisma.complexityLevel,
+    effortLevels: prisma.effortLevel,
+    evidenceStatuses: prisma.evidenceStatus,
+    workflowSteps: prisma.workflowStep,
+    escalationRules: prisma.escalationRule,
   };
   return map[type] ?? null;
 }
@@ -170,6 +200,8 @@ export async function POST(
     if ("scoreMax" in data) data.scoreMax = Number(data.scoreMax);
     if ("rank" in data) data.rank = Number(data.rank);
     if ("sourceCoefficient" in data) data.sourceCoefficient = Number(data.sourceCoefficient);
+    if ("daysBeforeDue" in data) data.daysBeforeDue = Number(data.daysBeforeDue);
+    if ("escalationLevel" in data) data.escalationLevel = Number(data.escalationLevel);
 
     const item = await delegate.create({ data });
     return NextResponse.json(item, { status: 201 });
