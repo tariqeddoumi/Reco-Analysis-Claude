@@ -21,6 +21,7 @@ import {
   Building2,
   FileUp,
   List,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,7 +46,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Missions", href: "/missions", icon: ClipboardList },
       { label: "Recommandations", href: "/recommendations", icon: ListChecks },
       { label: "Import Excel", href: "/recommendations/import", icon: FileUp },
-      { label: "Plans d'action", href: "/actions", icon: FileCheck2 },
+      { label: "Plans d'action", href: "/action-plans", icon: FileCheck2 },
+      { label: "Actions", href: "/actions", icon: ListTodo },
       { label: "Preuves", href: "/evidences", icon: GitBranch },
     ],
   },

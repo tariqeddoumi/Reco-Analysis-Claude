@@ -18,11 +18,21 @@ export async function GET(request: NextRequest) {
     await requireDbUser();
     const { searchParams } = new URL(request.url);
     const recommendationId = searchParams.get("recommendationId") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const statusCode = searchParams.get("statusCode") || undefined;
     const page = Number(searchParams.get("page")) || 1;
     const pageSize = Number(searchParams.get("pageSize")) || 20;
 
     const where: Record<string, unknown> = { isDeleted: false };
     if (recommendationId) where.recommendationId = recommendationId;
+    if (statusCode) where.statusCode = statusCode;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { recommendation: { code: { contains: search, mode: "insensitive" } } },
+      ];
+    }
 
     const [total, data] = await Promise.all([
       prisma.actionPlan.count({ where }),
@@ -30,11 +40,19 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           recommendation: {
-            select: { code: true, entity: { select: { label: true } } },
+            select: {
+              id: true,
+              code: true,
+              recommendation: true,
+              initialDueDate: true,
+              revisedDueDate: true,
+              entity: { select: { id: true, label: true } },
+              owner: { select: { id: true, firstName: true, lastName: true } },
+            },
           },
           actions: {
             where: { isDeleted: false },
-            select: { id: true, title: true, progressRate: true, status: true },
+            select: { id: true, progressRate: true, status: { select: { code: true } } },
           },
         },
         orderBy: { createdAt: "desc" },

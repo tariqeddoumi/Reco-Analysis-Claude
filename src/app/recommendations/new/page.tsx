@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -181,6 +181,8 @@ function ImpactSlider({
 
 export default function NewRecommendationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledMissionId = searchParams?.get("missionId") ?? "";
   const [step, setStep] = React.useState(1);
   const [referentials, setReferentials] = React.useState<ReferentialsData>({});
   const [missions, setMissions] = React.useState<Mission[]>([]);
@@ -198,7 +200,7 @@ export default function NewRecommendationPage() {
   } = useForm<RecommendationFormData>({
     resolver: zodResolver(recommendationSchema),
     defaultValues: {
-      missionId: "",
+      missionId: prefilledMissionId,
       sourceId: "",
       entityId: "",
       issuedAt: "",
@@ -209,6 +211,12 @@ export default function NewRecommendationPage() {
       isRecurrent: false,
     },
   });
+
+  React.useEffect(() => {
+    if (prefilledMissionId) {
+      setValue("missionId", prefilledMissionId);
+    }
+  }, [prefilledMissionId, setValue]);
 
   const watchedImpacts = {
     regulatory: watch("regulatoryImpact"),

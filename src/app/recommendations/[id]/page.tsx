@@ -65,6 +65,7 @@ import {
   ThumbsDown,
   Plus,
   Trash2,
+  Eye,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -101,7 +102,15 @@ interface ActionPlan {
 interface SubAction {
   id: string;
   title: string;
+  description?: string | null;
   progressRate: number;
+  weight?: number;
+  priority?: number;
+  statusId?: string;
+  responsibleId?: string | null;
+  priorityLevelId?: string | null;
+  complexityLevelId?: string | null;
+  effortLevelId?: string | null;
   status?: { code: string; label: string; color?: string | null };
   responsible?: { firstName: string; lastName: string } | null;
   plannedEndAt?: string | null;
@@ -303,6 +312,8 @@ export default function RecommendationDetailPage() {
   });
   const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [editingActionId, setEditingActionId] = React.useState<string | null>(null);
+  const [deletingActionId, setDeletingActionId] = React.useState<string | null>(null);
   const [actionStatuses, setActionStatuses] = React.useState<{ id: string; label: string }[]>([]);
   const [priorityLevels, setPriorityLevels] = React.useState<{ id: string; label: string }[]>([]);
   const [complexityLevels, setComplexityLevels] = React.useState<{ id: string; label: string }[]>([]);
@@ -401,34 +412,76 @@ export default function RecommendationDetailPage() {
     }
   };
 
+  const openEditAction = (action: SubAction, planId: string) => {
+    setEditingActionId(action.id);
+    setSelectedPlanId(planId);
+    setActionForm({
+      title: action.title,
+      description: action.description ?? "",
+      statusId: action.statusId ?? "",
+      responsibleId: action.responsibleId ?? "",
+      plannedEndAt: action.plannedEndAt ? action.plannedEndAt.substring(0, 10) : "",
+      priority: action.priority ?? 2,
+      priorityLevelId: action.priorityLevelId ?? "",
+      weight: action.weight ?? 100,
+      effortLevelId: action.effortLevelId ?? "",
+      complexityLevelId: action.complexityLevelId ?? "",
+    });
+    setActionError(null);
+    setShowActionDialog(true);
+  };
+
+  const handleDeleteAction = async (actionId: string) => {
+    setDeletingActionId(actionId);
+    try {
+      const res = await fetch(`/api/actions/${actionId}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } finally {
+      setDeletingActionId(null);
+    }
+  };
+
   const handleCreateAction = async () => {
-    if (!actionForm.title.trim() || !actionForm.statusId || !selectedPlanId) return;
+    if (!actionForm.title.trim() || !actionForm.statusId) return;
+    if (!editingActionId && !selectedPlanId) return;
     setIsSubmittingAction(true);
     setActionError(null);
     try {
       const body: Record<string, unknown> = {
-        actionPlanId: selectedPlanId,
         title: actionForm.title,
         statusId: actionForm.statusId,
         priority: actionForm.priority,
         weight: actionForm.weight,
       };
+      if (!editingActionId) body.actionPlanId = selectedPlanId;
       if (actionForm.description.trim()) body.description = actionForm.description;
-      if (actionForm.responsibleId) body.responsibleId = actionForm.responsibleId;
+      // For edits, send "" so the API can null it out; for creates, only send if filled
+      if (editingActionId) {
+        body.responsibleId = actionForm.responsibleId || "";
+        body.priorityLevelId = actionForm.priorityLevelId || "";
+        body.complexityLevelId = actionForm.complexityLevelId || "";
+        body.effortLevelId = actionForm.effortLevelId || "";
+      } else {
+        if (actionForm.responsibleId) body.responsibleId = actionForm.responsibleId;
+        if (actionForm.priorityLevelId) body.priorityLevelId = actionForm.priorityLevelId;
+        if (actionForm.complexityLevelId) body.complexityLevelId = actionForm.complexityLevelId;
+        if (actionForm.effortLevelId) body.effortLevelId = actionForm.effortLevelId;
+      }
       if (actionForm.plannedEndAt) body.plannedEndAt = actionForm.plannedEndAt;
-      if (actionForm.priorityLevelId) body.priorityLevelId = actionForm.priorityLevelId;
-      if (actionForm.complexityLevelId) body.complexityLevelId = actionForm.complexityLevelId;
-      if (actionForm.effortLevelId) body.effortLevelId = actionForm.effortLevelId;
-      const res = await fetch("/api/actions", {
-        method: "POST",
+
+      const url = editingActionId ? `/api/actions/${editingActionId}` : "/api/actions";
+      const method = editingActionId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "Erreur lors de la création");
+        throw new Error(err.error ?? "Erreur lors de l'enregistrement");
       }
       setShowActionDialog(false);
+      setEditingActionId(null);
       setActionForm({ title: "", description: "", statusId: "", responsibleId: "", plannedEndAt: "", priority: 2, priorityLevelId: "", weight: 100, effortLevelId: "", complexityLevelId: "" });
       setSelectedPlanId(null);
       fetchData();
@@ -839,6 +892,16 @@ export default function RecommendationDetailPage() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
+                          title="Ouvrir le plan d'action"
+                          onClick={() => router.push(`/action-plans/${plan.id}`)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Modifier le plan"
                           onClick={() => {
                             setEditPlanForm({ title: plan.title, description: "", weight: plan.weight ?? 100 });
                             setEditingPlanId(plan.id);
@@ -887,9 +950,12 @@ export default function RecommendationDetailPage() {
                       </p>
                       <div className="space-y-2">
                         {plan.actions.map((action) => (
-                          <div key={action.id} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 p-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate">{action.title}</p>
+                          <div key={action.id} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 p-3 hover:bg-muted/50 transition-colors">
+                            <button
+                              onClick={() => router.push(`/actions/${action.id}`)}
+                              className="flex-1 min-w-0 text-left"
+                            >
+                              <p className="text-xs font-medium truncate hover:text-primary">{action.title}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 {action.status && (
                                   <StatusBadge code={action.status.code} label={action.status.label} color={action.status.color} />
@@ -903,10 +969,61 @@ export default function RecommendationDetailPage() {
                                   <span className="text-xs text-muted-foreground">{formatDate(action.plannedEndAt)}</span>
                                 )}
                               </div>
-                            </div>
+                            </button>
                             <div className="flex items-center gap-2 shrink-0">
                               <Progress value={action.progressRate} className="h-1.5 w-16" />
                               <span className="text-xs font-medium w-8 text-right">{action.progressRate}%</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                title="Voir le détail de l'action"
+                                onClick={(e) => { e.stopPropagation(); router.push(`/actions/${action.id}`); }}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                title="Modifier l'action"
+                                onClick={(e) => { e.stopPropagation(); openEditAction(action, plan.id); }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    title="Supprimer l'action"
+                                    disabled={deletingActionId === action.id}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Supprimer cette action ?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      L&apos;action « {action.title} » sera archivée.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteAction(action.id)}
+                                      className="bg-destructive hover:bg-destructive/90"
+                                    >
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         ))}
@@ -1232,11 +1349,11 @@ export default function RecommendationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog création action ── */}
-      <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
-        <DialogContent className="sm:max-w-lg">
+      {/* ── Dialog création / édition action ── */}
+      <Dialog open={showActionDialog} onOpenChange={(o) => { setShowActionDialog(o); if (!o) setEditingActionId(null); }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nouvelle action</DialogTitle>
+            <DialogTitle>{editingActionId ? "Modifier l'action" : "Nouvelle action"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {actionError && (
@@ -1336,9 +1453,9 @@ export default function RecommendationDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowActionDialog(false)} disabled={isSubmittingAction}>Annuler</Button>
+            <Button variant="outline" onClick={() => { setShowActionDialog(false); setEditingActionId(null); }} disabled={isSubmittingAction}>Annuler</Button>
             <Button onClick={handleCreateAction} disabled={isSubmittingAction || !actionForm.title.trim() || !actionForm.statusId}>
-              {isSubmittingAction ? "Création..." : "Créer l'action"}
+              {isSubmittingAction ? "Enregistrement..." : editingActionId ? "Mettre à jour" : "Créer l'action"}
             </Button>
           </DialogFooter>
         </DialogContent>

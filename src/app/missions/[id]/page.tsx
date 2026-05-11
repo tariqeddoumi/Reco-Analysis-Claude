@@ -32,7 +32,19 @@ import {
   AlertCircle,
   Clock,
   Eye,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { TemporalStatus } from "@/types";
 
 interface MissionDetail {
@@ -134,6 +146,20 @@ export default function MissionDetailPage() {
   const [stats, setStats] = React.useState<MissionStats>({ total: 0, open: 0, closed: 0, overdue: 0 });
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState("informations");
+  const [deletingRecoId, setDeletingRecoId] = React.useState<string | null>(null);
+
+  const handleDeleteReco = async (recoId: string) => {
+    setDeletingRecoId(recoId);
+    try {
+      const res = await fetch(`/api/recommendations/${recoId}`, { method: "DELETE" });
+      if (res.ok) {
+        setRecommendations((prev) => prev.filter((r) => r.id !== recoId));
+        setStats((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      }
+    } finally {
+      setDeletingRecoId(null);
+    }
+  };
 
   React.useEffect(() => {
     if (!id) return;
@@ -219,17 +245,61 @@ export default function MissionDetailPage() {
     },
     {
       key: "actions",
-      header: "",
+      header: "Actions",
       className: "text-right",
+      headerClassName: "text-right",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={(e) => { e.stopPropagation(); router.push(`/recommendations/${row.id}`); }}
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center justify-end gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="Voir le détail"
+            onClick={(e) => { e.stopPropagation(); router.push(`/recommendations/${row.id}`); }}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="Modifier"
+            onClick={(e) => { e.stopPropagation(); router.push(`/recommendations/${row.id}/edit`); }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                title="Supprimer"
+                disabled={deletingRecoId === row.id}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer cette recommandation ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  La recommandation « {row.code} » et tous ses plans/actions seront archivés. Cette opération est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => { e.stopPropagation(); handleDeleteReco(row.id); }}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       ),
     },
   ];
@@ -406,7 +476,19 @@ export default function MissionDetailPage() {
           </TabsContent>
 
           {/* Recommandations tab */}
-          <TabsContent value="recommandations" className="mt-6">
+          <TabsContent value="recommandations" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {recommendations.length} recommandation{recommendations.length !== 1 ? "s" : ""} liée{recommendations.length !== 1 ? "s" : ""} à cette mission
+              </p>
+              <Button
+                size="sm"
+                onClick={() => router.push(`/recommendations/new?missionId=${id}`)}
+              >
+                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+                Nouvelle recommandation
+              </Button>
+            </div>
             <DataTable
               columns={recoColumns}
               data={recommendations}
