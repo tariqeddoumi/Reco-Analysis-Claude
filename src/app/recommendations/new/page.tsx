@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -179,7 +180,7 @@ function ImpactSlider({
   );
 }
 
-export default function NewRecommendationPage() {
+function NewRecommendationPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledMissionId = searchParams?.get("missionId") ?? "";
@@ -837,5 +838,13 @@ export default function NewRecommendationPage() {
         </form>
       </div>
     </AppLayout>
+  );
+}
+
+export default function NewRecommendationPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewRecommendationPageInner />
+    </Suspense>
   );
 }
