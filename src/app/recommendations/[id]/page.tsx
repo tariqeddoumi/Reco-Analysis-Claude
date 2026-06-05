@@ -90,12 +90,10 @@ interface Impact {
 interface ActionPlan {
   id: string;
   title: string;
+  description?: string | null;
   progressRate: number;
   weight: number;
-  plannedEndAt?: string | null;
-  actualEndAt?: string | null;
-  status?: { code: string; label: string; color?: string | null };
-  responsible?: { firstName: string; lastName: string } | null;
+  statusCode: string;
   actions?: SubAction[];
 }
 
@@ -201,6 +199,15 @@ interface RecommendationDetail {
   statusHistory?: HistoryEntry[];
   workflowSteps?: WorkflowStep[];
 }
+
+const PLAN_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Brouillon",
+  PROPOSED: "Proposé",
+  APPROVED: "Approuvé",
+  IN_PROGRESS: "En cours",
+  COMPLETED: "Terminé",
+  CANCELLED: "Annulé",
+};
 
 /* ─────────────────────────── Sub-components ─────────────────────────── */
 
@@ -866,20 +873,11 @@ export default function RecommendationDetailPage() {
                       <div className="flex-1">
                         <p className="text-sm font-semibold">{plan.title}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                          {plan.status && (
-                            <StatusBadge code={plan.status.code} label={plan.status.label} color={plan.status.color} />
-                          )}
-                          {plan.responsible && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {plan.responsible.firstName} {plan.responsible.lastName}
-                            </span>
-                          )}
-                          {plan.plannedEndAt && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDate(plan.plannedEndAt)}
-                            </span>
+                          {plan.statusCode && (
+                            <StatusBadge
+                              code={plan.statusCode}
+                              label={PLAN_STATUS_LABELS[plan.statusCode] ?? plan.statusCode}
+                            />
                           )}
                           <Badge variant="secondary" className="text-xs">
                             Poids: {plan.weight ?? 100}%
@@ -903,7 +901,7 @@ export default function RecommendationDetailPage() {
                           className="h-7 w-7"
                           title="Modifier le plan"
                           onClick={() => {
-                            setEditPlanForm({ title: plan.title, description: "", weight: plan.weight ?? 100 });
+                            setEditPlanForm({ title: plan.title, description: plan.description ?? "", weight: plan.weight ?? 100 });
                             setEditingPlanId(plan.id);
                           }}
                         >

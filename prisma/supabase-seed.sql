@@ -174,6 +174,41 @@ CREATE TABLE IF NOT EXISTS root_cause_types (
   "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS complexity_levels (
+  id          TEXT        NOT NULL PRIMARY KEY,
+  code        TEXT        NOT NULL UNIQUE,
+  label       TEXT        NOT NULL,
+  description TEXT,
+  rank        INTEGER,
+  "isActive"  BOOLEAN     NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS effort_levels (
+  id          TEXT        NOT NULL PRIMARY KEY,
+  code        TEXT        NOT NULL UNIQUE,
+  label       TEXT        NOT NULL,
+  description TEXT,
+  rank        INTEGER,
+  "isActive"  BOOLEAN     NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evidence_statuses (
+  id          TEXT        NOT NULL PRIMARY KEY,
+  code        TEXT        NOT NULL UNIQUE,
+  label       TEXT        NOT NULL,
+  description TEXT,
+  color       TEXT,
+  rank        INTEGER,
+  "isFinal"   BOOLEAN     NOT NULL DEFAULT false,
+  "isActive"  BOOLEAN     NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS escalation_rules (
   id               TEXT        NOT NULL PRIMARY KEY,
   code             TEXT        NOT NULL UNIQUE,
@@ -431,31 +466,39 @@ CREATE TABLE IF NOT EXISTS action_plans (
 );
 
 CREATE TABLE IF NOT EXISTS actions (
-  id              TEXT        NOT NULL PRIMARY KEY,
-  "actionPlanId"  TEXT        NOT NULL,
-  title           TEXT        NOT NULL,
-  description     TEXT,
-  "responsibleId" TEXT,
-  "statusId"      TEXT        NOT NULL,
-  priority        INTEGER     NOT NULL DEFAULT 2,
-  "progressRate"  INTEGER     NOT NULL DEFAULT 0,
-  weight          INTEGER     NOT NULL DEFAULT 100,
-  "estimatedEffort" TEXT,
-  complexity      TEXT,
-  "plannedStartAt" TIMESTAMP(3),
-  "plannedEndAt"  TIMESTAMP(3),
-  "actualEndAt"   TIMESTAMP(3),
-  deliverable     TEXT,
-  "expectedProof" TEXT,
-  "blockReason"   TEXT,
-  comment         TEXT,
-  "isDeleted"     BOOLEAN     NOT NULL DEFAULT false,
-  "createdAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"     TIMESTAMP(3) NOT NULL,
-  "createdBy"     TEXT,
-  FOREIGN KEY ("actionPlanId")  REFERENCES action_plans(id),
-  FOREIGN KEY ("responsibleId") REFERENCES users(id),
-  FOREIGN KEY ("statusId")      REFERENCES action_statuses(id)
+  id                  TEXT        NOT NULL PRIMARY KEY,
+  "actionPlanId"      TEXT        NOT NULL,
+  title               TEXT        NOT NULL,
+  description         TEXT,
+  "responsibleId"     TEXT,
+  "statusId"          TEXT        NOT NULL,
+  priority            INTEGER     NOT NULL DEFAULT 2,
+  "priorityLevelId"   TEXT,
+  "progressRate"      INTEGER     NOT NULL DEFAULT 0,
+  weight              INTEGER     NOT NULL DEFAULT 100,
+  "estimatedEffort"   TEXT,
+  "effortLevelId"     TEXT,
+  complexity          TEXT,
+  "complexityLevelId" TEXT,
+  "plannedStartAt"    TIMESTAMP(3),
+  "plannedEndAt"      TIMESTAMP(3),
+  "actualEndAt"       TIMESTAMP(3),
+  deliverable         TEXT,
+  "expectedProof"     TEXT,
+  "blockReason"       TEXT,
+  comment             TEXT,
+  "isDeleted"         BOOLEAN     NOT NULL DEFAULT false,
+  "deletedAt"         TIMESTAMP(3),
+  "deletedBy"         TEXT,
+  "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"         TIMESTAMP(3) NOT NULL,
+  "createdBy"         TEXT,
+  FOREIGN KEY ("actionPlanId")      REFERENCES action_plans(id),
+  FOREIGN KEY ("responsibleId")     REFERENCES users(id),
+  FOREIGN KEY ("statusId")          REFERENCES action_statuses(id),
+  FOREIGN KEY ("priorityLevelId")   REFERENCES priority_levels(id),
+  FOREIGN KEY ("complexityLevelId") REFERENCES complexity_levels(id),
+  FOREIGN KEY ("effortLevelId")     REFERENCES effort_levels(id)
 );
 
 CREATE TABLE IF NOT EXISTS evidences (
