@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       pageSize: Number(searchParams.get("pageSize")) || 20,
       search: searchParams.get("search") || undefined,
       statusId: searchParams.get("statusId") || undefined,
+      statusCode: searchParams.get("statusCode") || undefined,
       sourceId: searchParams.get("sourceId") || undefined,
       entityId: searchParams.get("entityId") || undefined,
       priorityId: searchParams.get("priorityId") || undefined,

@@ -66,9 +66,9 @@ export default function WorkflowPage() {
 
   async function fetchAll() {
     const [plansRes, evidencesRes, closuresRes, extensionsRes] = await Promise.all([
-      fetch("/api/recommendations?statusId=PLAN_SUBMITTED&pageSize=20"),
+      fetch("/api/recommendations?statusCode=PLAN_SUBMITTED&pageSize=20"),
       fetch("/api/evidences?statusCode=IN_REVIEW"),
-      fetch("/api/recommendations?statusId=CLOSURE_PROPOSED&pageSize=20"),
+      fetch("/api/recommendations?statusCode=CLOSURE_PROPOSED&pageSize=20"),
       fetch("/api/extensions?statusCode=SUBMITTED"),
     ]);
 

@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
 
     if (!title) return NextResponse.json({ error: "Le titre est obligatoire" }, { status: 400 });
 
+    if (evidenceTypeId && mimeType) {
+      const evidenceType = await prisma.evidenceType.findUnique({ where: { id: evidenceTypeId } });
+      if (evidenceType && evidenceType.allowedMime.length > 0 && !evidenceType.allowedMime.includes(mimeType)) {
+        return NextResponse.json(
+          { error: `Type de fichier non autorisé pour ce type de preuve. Types acceptés : ${evidenceType.allowedMime.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
     const evidence = await prisma.evidence.create({
       data: {
         title,

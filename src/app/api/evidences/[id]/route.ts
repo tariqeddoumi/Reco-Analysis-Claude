@@ -48,7 +48,7 @@ export async function PATCH(
     const user = await requireDbUser();
     const { id } = await params;
 
-    if (!hasPermission(user, PERMISSIONS.EVIDENCE_CREATE)) {
+    if (!hasPermission(user, PERMISSIONS.EVIDENCE_UPDATE)) {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
     }
 
@@ -90,7 +90,7 @@ export async function DELETE(
     const user = await requireDbUser();
     const { id } = await params;
 
-    if (!hasPermission(user, PERMISSIONS.EVIDENCE_CREATE)) {
+    if (!hasPermission(user, PERMISSIONS.EVIDENCE_DELETE)) {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
     }
 

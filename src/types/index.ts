@@ -96,6 +96,7 @@ export interface FilterOptions {
   pageSize?: number;
   search?: string;
   statusId?: string;
+  statusCode?: string;
   sourceId?: string;
   entityId?: string;
   priorityId?: string;

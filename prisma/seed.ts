@@ -309,6 +309,8 @@ async function main() {
     { code: "action:delete", label: "Supprimer une action", module: "actions", action: "delete" },
     { code: "evidence:read", label: "Lire les preuves", module: "evidences", action: "read" },
     { code: "evidence:create", label: "Déposer une preuve", module: "evidences", action: "create" },
+    { code: "evidence:update", label: "Modifier une preuve", module: "evidences", action: "update" },
+    { code: "evidence:delete", label: "Supprimer une preuve", module: "evidences", action: "delete" },
     { code: "evidence:validate", label: "Valider une preuve", module: "evidences", action: "validate" },
     { code: "evidence:reject", label: "Rejeter une preuve", module: "evidences", action: "reject" },
     { code: "report:read", label: "Voir les rapports", module: "reports", action: "read" },

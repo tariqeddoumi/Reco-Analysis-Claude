@@ -26,6 +26,8 @@ export const PERMISSIONS = {
   // Evidences
   EVIDENCE_READ: "evidence:read",
   EVIDENCE_CREATE: "evidence:create",
+  EVIDENCE_UPDATE: "evidence:update",
+  EVIDENCE_DELETE: "evidence:delete",
   EVIDENCE_VALIDATE: "evidence:validate",
   EVIDENCE_REJECT: "evidence:reject",
   // Reports

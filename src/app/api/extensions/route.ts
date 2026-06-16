@@ -48,6 +48,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (currentDueDate && new Date(requestedDueDate) <= new Date(currentDueDate)) {
+      return NextResponse.json(
+        { error: "La nouvelle date doit être postérieure à la date d'échéance actuelle" },
+        { status: 400 }
+      );
+    }
+
     const extension = await prisma.deadlineExtension.create({
       data: {
         reason,

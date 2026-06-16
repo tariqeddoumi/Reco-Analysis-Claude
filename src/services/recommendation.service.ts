@@ -9,6 +9,7 @@ export async function getRecommendations(filters: FilterOptions = {}): Promise<P
     pageSize = 20,
     search,
     statusId,
+    statusCode,
     sourceId,
     entityId,
     priorityId,
@@ -30,7 +31,12 @@ export async function getRecommendations(filters: FilterOptions = {}): Promise<P
       { findingDescription: { contains: search, mode: "insensitive" } },
     ];
   }
-  if (statusId) where.statusId = statusId;
+  if (statusCode) {
+    const status = await prisma.recommendationStatus.findUnique({ where: { code: statusCode } });
+    if (status) where.statusId = status.id;
+  } else if (statusId) {
+    where.statusId = statusId;
+  }
   if (sourceId) where.sourceId = sourceId;
   if (entityId) where.entityId = entityId;
   if (priorityId) where.priorityId = priorityId;
@@ -272,6 +278,7 @@ export async function getDashboardKpis() {
     avgProgress,
     totalExtensions,
     rejectedEvidences,
+    closedRecosDates,
   ] = await Promise.all([
     prisma.mission.count({ where: { isDeleted: false } }),
     prisma.recommendation.count({ where: { isDeleted: false } }),
@@ -307,9 +314,22 @@ export async function getDashboardKpis() {
     }),
     prisma.deadlineExtension.count({ where: { isDeleted: false } }),
     prisma.evidence.count({ where: { isDeleted: false, statusCode: "REJECTED" } }),
+    prisma.recommendation.findMany({
+      where: { isDeleted: false, closedAt: { not: null } },
+      select: { createdAt: true, closedAt: true },
+    }),
   ]);
 
   const total = totalRecommendations || 1;
+
+  const averageProcessingDays =
+    closedRecosDates.length > 0
+      ? Math.round(
+          closedRecosDates.reduce((sum, r) => {
+            return sum + (r.closedAt!.getTime() - r.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+          }, 0) / closedRecosDates.length
+        )
+      : 0;
 
   return {
     totalMissions,
@@ -321,7 +341,7 @@ export async function getDashboardKpis() {
     regulatorRecommendations,
     globalClosureRate: Math.round((closedRecommendations / total) * 100),
     averageProgressRate: Math.round(avgProgress._avg.progressRate || 0),
-    averageProcessingDays: 0,
+    averageProcessingDays,
     totalExtensions,
     rejectedEvidences,
   };
