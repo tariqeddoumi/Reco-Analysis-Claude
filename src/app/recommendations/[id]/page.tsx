@@ -326,6 +326,10 @@ export default function RecommendationDetailPage() {
   const [complexityLevels, setComplexityLevels] = React.useState<{ id: string; label: string }[]>([]);
   const [effortLevels, setEffortLevels] = React.useState<{ id: string; label: string }[]>([]);
   const [refUsers, setRefUsers] = React.useState<{ id: string; firstName: string; lastName: string }[]>([]);
+  const [recoStatuses, setRecoStatuses] = React.useState<{ id: string; code: string; label: string }[]>([]);
+  const [showStatusDialog, setShowStatusDialog] = React.useState(false);
+  const [statusForm, setStatusForm] = React.useState({ statusId: "", comment: "" });
+  const [isSubmittingStatus, setIsSubmittingStatus] = React.useState(false);
 
   const fetchData = React.useCallback(() => {
     if (!id) return;
@@ -348,6 +352,7 @@ export default function RecommendationDetailPage() {
         setComplexityLevels(data.complexityLevels ?? []);
         setEffortLevels(data.effortLevels ?? []);
         setRefUsers(data.users ?? []);
+        setRecoStatuses(data.recommendationStatuses ?? []);
       })
       .catch(console.error);
   }, []);
@@ -499,6 +504,43 @@ export default function RecommendationDetailPage() {
     }
   };
 
+  const handleChangeStatus = async () => {
+    if (!statusForm.statusId || !id) return;
+    setIsSubmittingStatus(true);
+    try {
+      const res = await fetch(`/api/recommendations/${id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusId: statusForm.statusId, comment: statusForm.comment }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Erreur");
+      setShowStatusDialog(false);
+      setStatusForm({ statusId: "", comment: "" });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingStatus(false);
+    }
+  };
+
+  const handleProposeClose = async () => {
+    if (!id) return;
+    const closureStatus = recoStatuses.find((s) => s.code === "CLOSURE_PROPOSED");
+    if (!closureStatus) return;
+    setIsSubmittingStatus(true);
+    try {
+      const res = await fetch(`/api/recommendations/${id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusId: closureStatus.id, comment: "Clôture proposée" }),
+      });
+      if (res.ok) fetchData();
+    } finally {
+      setIsSubmittingStatus(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -598,15 +640,21 @@ export default function RecommendationDetailPage() {
               <Pencil className="h-3.5 w-3.5" />
               Modifier
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => { setStatusForm({ statusId: rec.status ? (recoStatuses.find(s => s.code === rec.status!.code)?.id ?? "") : "", comment: "" }); setShowStatusDialog(true); }}>
               <RefreshCw className="h-3.5 w-3.5" />
               Changer le statut
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => router.push(`/extensions?recoId=${id}`)}>
               <CalendarClock className="h-3.5 w-3.5" />
               Demander une extension
             </Button>
-            <Button variant="outline" size="sm" className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+              onClick={handleProposeClose}
+              disabled={isSubmittingStatus || rec.status?.code === "CLOSURE_PROPOSED" || rec.status?.code === "CLOSED"}
+            >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Proposer la clôture
             </Button>
@@ -1454,6 +1502,45 @@ export default function RecommendationDetailPage() {
             <Button variant="outline" onClick={() => { setShowActionDialog(false); setEditingActionId(null); }} disabled={isSubmittingAction}>Annuler</Button>
             <Button onClick={handleCreateAction} disabled={isSubmittingAction || !actionForm.title.trim() || !actionForm.statusId}>
               {isSubmittingAction ? "Enregistrement..." : editingActionId ? "Mettre à jour" : "Créer l'action"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog changement de statut ── */}
+      <Dialog open={showStatusDialog} onOpenChange={(open) => { if (!open) setShowStatusDialog(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Changer le statut</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Nouveau statut <span className="text-destructive">*</span></Label>
+              <Select value={statusForm.statusId} onValueChange={(v) => setStatusForm((f) => ({ ...f, statusId: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recoStatuses.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Commentaire</Label>
+              <Textarea
+                value={statusForm.comment}
+                onChange={(e) => setStatusForm((f) => ({ ...f, comment: e.target.value }))}
+                placeholder="Motif du changement de statut (optionnel)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStatusDialog(false)} disabled={isSubmittingStatus}>Annuler</Button>
+            <Button onClick={handleChangeStatus} disabled={isSubmittingStatus || !statusForm.statusId}>
+              {isSubmittingStatus ? "Enregistrement..." : "Changer le statut"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -74,6 +74,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    if (validated.statusId && !actionData.actualEndAt) {
+      const newStatus = await prisma.actionStatus.findUnique({ where: { id: validated.statusId } });
+      if (newStatus?.isFinal) actionData.actualEndAt = new Date();
+    }
+
     const action = await prisma.action.update({
       where: { id },
       data: actionData as Parameters<typeof prisma.action.update>[0]["data"],
