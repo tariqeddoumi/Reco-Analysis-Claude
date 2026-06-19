@@ -42,6 +42,11 @@ import {
   Paperclip,
   CheckCircle2,
   RefreshCw,
+  Pencil,
+  Trash2,
+  XCircle,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 
 interface Action {
@@ -70,11 +75,16 @@ interface Action {
   evidences: Array<{
     id: string;
     title: string;
+    description: string | null;
     statusCode: string;
-    evidenceType: { label: string } | null;
+    evidenceTypeId: string | null;
+    evidenceType: { id: string; label: string } | null;
     depositor: { firstName: string; lastName: string } | null;
+    depositedAt: string;
     createdAt: string;
     fileName: string | null;
+    validatorComment: string | null;
+    validatedAt: string | null;
   }>;
   comments: Array<{
     id: string;
@@ -109,6 +119,20 @@ export default function ActionDetailPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [actionStatuses, setActionStatuses] = React.useState<ActionStatus[]>([]);
+  const [evidenceTypes, setEvidenceTypes] = React.useState<{ id: string; label: string }[]>([]);
+
+  // Evidence edit dialog
+  const [editingEvidenceId, setEditingEvidenceId] = React.useState<string | null>(null);
+  const [evidenceEditForm, setEvidenceEditForm] = React.useState({ title: "", description: "", evidenceTypeId: "" });
+  const [isSavingEvidence, setIsSavingEvidence] = React.useState(false);
+
+  // Evidence validate/reject dialog
+  const [validateDialog, setValidateDialog] = React.useState<{ evidenceId: string; mode: "accept" | "reject" } | null>(null);
+  const [validateComment, setValidateComment] = React.useState("");
+  const [isValidating, setIsValidating] = React.useState(false);
+
+  // Evidence delete
+  const [deletingEvidenceId, setDeletingEvidenceId] = React.useState<string | null>(null);
 
   // Update progress dialog
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
@@ -145,7 +169,10 @@ export default function ActionDetailPage() {
   React.useEffect(() => {
     fetch("/api/admin/referentials?type=all")
       .then((r) => r.json())
-      .then((data) => setActionStatuses(data.actionStatuses ?? []))
+      .then((data) => {
+        setActionStatuses(data.actionStatuses ?? []);
+        setEvidenceTypes(data.evidenceTypes ?? []);
+      })
       .catch(console.error);
   }, []);
 
@@ -168,6 +195,59 @@ export default function ActionDetailPage() {
       }
     } finally {
       setIsSavingProgress(false);
+    }
+  }
+
+  function openEditEvidence(ev: Action["evidences"][0]) {
+    setEditingEvidenceId(ev.id);
+    setEvidenceEditForm({ title: ev.title, description: ev.description ?? "", evidenceTypeId: ev.evidenceTypeId ?? "" });
+  }
+
+  async function handleEditEvidence() {
+    if (!editingEvidenceId) return;
+    setIsSavingEvidence(true);
+    try {
+      const res = await fetch(`/api/evidences/${editingEvidenceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: evidenceEditForm.title,
+          description: evidenceEditForm.description || undefined,
+          evidenceTypeId: evidenceEditForm.evidenceTypeId || undefined,
+        }),
+      });
+      if (res.ok) { setEditingEvidenceId(null); fetchAction(); }
+    } finally {
+      setIsSavingEvidence(false);
+    }
+  }
+
+  async function handleValidateEvidence() {
+    if (!validateDialog) return;
+    if (validateDialog.mode === "reject" && !validateComment.trim()) return;
+    setIsValidating(true);
+    try {
+      const res = await fetch(`/api/evidences/${validateDialog.evidenceId}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: validateDialog.mode,
+          ...(validateDialog.mode === "accept" ? { comment: validateComment || undefined } : { reason: validateComment }),
+        }),
+      });
+      if (res.ok) { setValidateDialog(null); setValidateComment(""); fetchAction(); }
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  async function handleDeleteEvidence(evidenceId: string) {
+    setDeletingEvidenceId(evidenceId);
+    try {
+      const res = await fetch(`/api/evidences/${evidenceId}`, { method: "DELETE" });
+      if (res.ok) fetchAction();
+    } finally {
+      setDeletingEvidenceId(null);
     }
   }
 
@@ -518,34 +598,105 @@ export default function ActionDetailPage() {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {action.evidences.map((ev) => (
-                    <Card key={ev.id}>
-                      <CardContent className="py-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm font-medium">{ev.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {ev.evidenceType && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {ev.evidenceType.label}
-                                  </Badge>
+                  {action.evidences.map((ev) => {
+                    const isPending = ev.statusCode === "DEPOSITED" || ev.statusCode === "IN_REVIEW";
+                    const isAccepted = ev.statusCode === "ACCEPTED";
+                    const isRejected = ev.statusCode === "REJECTED";
+                    return (
+                      <Card
+                        key={ev.id}
+                        className={
+                          isAccepted
+                            ? "border-green-500/50"
+                            : isRejected
+                            ? "border-red-500/50"
+                            : undefined
+                        }
+                      >
+                        <CardContent className="py-4 space-y-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{ev.title}</p>
+                                {ev.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">{ev.description}</p>
                                 )}
-                                <span className="text-xs text-muted-foreground">
-                                  {ev.depositor
-                                    ? `${ev.depositor.firstName} ${ev.depositor.lastName}`
-                                    : "—"}{" "}
-                                  · {formatDate(ev.createdAt)}
-                                </span>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {ev.evidenceType && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {ev.evidenceType.label}
+                                    </Badge>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">
+                                    {ev.depositor
+                                      ? `${ev.depositor.firstName} ${ev.depositor.lastName}`
+                                      : "—"}{" "}
+                                    · {formatDate(ev.createdAt)}
+                                  </span>
+                                </div>
+                                {isRejected && ev.validatorComment && (
+                                  <div className="mt-2 flex items-start gap-2 text-xs text-red-600 bg-red-50 rounded p-2">
+                                    <XCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                    <span>{ev.validatorComment}</span>
+                                  </div>
+                                )}
+                                {isAccepted && ev.validatedAt && (
+                                  <p className="text-xs text-green-600 mt-1">
+                                    Validée le {formatDate(ev.validatedAt)}
+                                  </p>
+                                )}
                               </div>
                             </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <StatusBadge code={ev.statusCode} label={ev.statusCode} />
+                              {isPending && (
+                                <>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7"
+                                    title="Modifier"
+                                    onClick={() => openEditEvidence(ev)}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-green-600 hover:text-green-700"
+                                    title="Valider"
+                                    onClick={() => { setValidateDialog({ evidenceId: ev.id, mode: "accept" }); setValidateComment(""); }}
+                                  >
+                                    <ThumbsUp className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-red-600 hover:text-red-700"
+                                    title="Rejeter"
+                                    onClick={() => { setValidateDialog({ evidenceId: ev.id, mode: "reject" }); setValidateComment(""); }}
+                                  >
+                                    <ThumbsDown className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    title="Supprimer"
+                                    disabled={deletingEvidenceId === ev.id}
+                                    onClick={() => handleDeleteEvidence(ev.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <StatusBadge code={ev.statusCode} label={ev.statusCode} />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -732,6 +883,112 @@ export default function ActionDetailPage() {
             </Button>
             <Button onClick={handleStatusChange} disabled={isSavingStatus || !newStatusId}>
               {isSavingStatus ? "Enregistrement..." : "Confirmer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Evidence Dialog */}
+      <Dialog open={!!editingEvidenceId} onOpenChange={(open) => { if (!open) setEditingEvidenceId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier la preuve</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Titre</Label>
+              <input
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={evidenceEditForm.title}
+                onChange={(e) => setEvidenceEditForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Type de preuve</Label>
+              <Select
+                value={evidenceEditForm.evidenceTypeId}
+                onValueChange={(v) => setEvidenceEditForm((f) => ({ ...f, evidenceTypeId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {evidenceTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Description (optionnelle)</Label>
+              <Textarea
+                placeholder="Description de la preuve..."
+                value={evidenceEditForm.description}
+                onChange={(e) => setEvidenceEditForm((f) => ({ ...f, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingEvidenceId(null)}>
+              Annuler
+            </Button>
+            <Button onClick={handleEditEvidence} disabled={isSavingEvidence || !evidenceEditForm.title.trim()}>
+              {isSavingEvidence ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Validate / Reject Evidence Dialog */}
+      <Dialog open={!!validateDialog} onOpenChange={(open) => { if (!open) { setValidateDialog(null); setValidateComment(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {validateDialog?.mode === "accept" ? "Valider la preuve" : "Rejeter la preuve"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>
+                {validateDialog?.mode === "accept"
+                  ? "Commentaire (optionnel)"
+                  : "Motif du rejet (obligatoire)"}
+              </Label>
+              <Textarea
+                placeholder={
+                  validateDialog?.mode === "accept"
+                    ? "Commentaire de validation..."
+                    : "Expliquer pourquoi la preuve est rejetée..."
+                }
+                value={validateComment}
+                onChange={(e) => setValidateComment(e.target.value)}
+                rows={3}
+              />
+            </div>
+            {validateDialog?.mode === "reject" && !validateComment.trim() && (
+              <p className="text-xs text-destructive">Le motif est obligatoire pour un rejet.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setValidateDialog(null); setValidateComment(""); }}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleValidateEvidence}
+              disabled={
+                isValidating ||
+                (validateDialog?.mode === "reject" && !validateComment.trim())
+              }
+              variant={validateDialog?.mode === "reject" ? "destructive" : "default"}
+            >
+              {isValidating
+                ? "En cours..."
+                : validateDialog?.mode === "accept"
+                ? "Valider"
+                : "Rejeter"}
             </Button>
           </DialogFooter>
         </DialogContent>
